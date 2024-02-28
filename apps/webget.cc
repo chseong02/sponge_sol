@@ -24,7 +24,7 @@ void get_URL(const string &host, const string &path) {
     TCPSocket socket;
 
     socket.connect(address);
-    socket.write(string("GET ")+path+string(" HTTP/1.1")+string("\r\n")+string("Host: ")+host+string("\r\n")+string("Connection: close")+string("\r\n\r\n"));
+    socket.write("GET "s + path + " HTTP/1.1"s + "\r\n"s +"Host: "s + host + "\r\n"s + "Connection: close"s + "\r\n\r\n"s);
     while (!socket.eof()) {
         string str = socket.read();
         cout << str;
