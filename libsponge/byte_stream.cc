@@ -12,7 +12,9 @@ void DUMMY_CODE(Targs &&... /* unused */) {}
 
 using namespace std;
 
-ByteStream::ByteStream(const size_t capacity) { DUMMY_CODE(capacity); }
+ByteStream::ByteStream(const size_t capacity){
+    _capacity = capacity;
+}
 
 size_t ByteStream::write(const string &data) {
     DUMMY_CODE(data);
@@ -36,18 +38,30 @@ std::string ByteStream::read(const size_t len) {
     return {};
 }
 
-void ByteStream::end_input() {}
+void ByteStream::end_input() {
+    _isEnded=true;
+}
 
-bool ByteStream::input_ended() const { return {}; }
+bool ByteStream::input_ended() const {
+    return _isEnded;
+}
 
-size_t ByteStream::buffer_size() const { return {}; }
+size_t ByteStream::buffer_size() const {
+    return _buffer.length();
+}
 
-bool ByteStream::buffer_empty() const { return {}; }
+bool ByteStream::buffer_empty() const {
+    return _buffer.empty();
+}
 
-bool ByteStream::eof() const { return false; }
+bool ByteStream::eof() const {
+    return input_ended() && buffer_empty();
+}
 
 size_t ByteStream::bytes_written() const { return {}; }
 
 size_t ByteStream::bytes_read() const { return {}; }
 
-size_t ByteStream::remaining_capacity() const { return {}; }
+size_t ByteStream::remaining_capacity() const {
+    return _capacity - buffer_size();
+}
