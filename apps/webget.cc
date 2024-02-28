@@ -17,7 +17,7 @@ void get_URL(const string &host, const string &path) {
     // (not just one call to read() -- everything) until you reach
     // the "eof" (end of file).
     //
-    
+
     const string service = "http";
     const string end = "\r\n"s;
 
@@ -26,10 +26,10 @@ void get_URL(const string &host, const string &path) {
     string request;
 
     socket.connect(address);
-    request = "GET "s + path + " HTTP/1.1"s + end 
-	    + "Host: "s + host + end 
-	    + "Connection: close"s + end 
-	    + end;
+    request = "GET "s + path + " HTTP/1.1"s + end;
+    request += "Host: "s + host + end;
+    request += "Connection: close"s + end;
+    request += end;
     socket.write(request);
 
     while (!socket.eof()) {
