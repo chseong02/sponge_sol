@@ -18,8 +18,8 @@ class ByteStream {
     // different approaches.
     std::string _buffer = std::string("");
     size_t _capacity = 0;
-    bool _isEnded = false;
-    size_t _writtenLength = 0;
+    bool _is_ended = false;
+    size_t _written_length = 0;
     bool _error{};  //!< Flag indicating that the stream suffered an error.
 
   public:

@@ -15,10 +15,10 @@ using namespace std;
 ByteStream::ByteStream(const size_t capacity) { _capacity = capacity; }
 
 size_t ByteStream::write(const string &data) {
-    size_t appendLength = remaining_capacity() <= data.length() ? remaining_capacity() : data.length();
-    _buffer.append(data, 0, appendLength);
-    _writtenLength += appendLength;
-    return appendLength;
+    size_t append_length = remaining_capacity() <= data.length() ? remaining_capacity() : data.length();
+    _buffer.append(data, 0, append_length);
+    _written_length += append_length;
+    return append_length;
 }
 
 //! \param[in] len bytes will be copied from the output side of the buffer
@@ -39,9 +39,9 @@ std::string ByteStream::read(const size_t len) {
     return str;
 }
 
-void ByteStream::end_input() { _isEnded = true; }
+void ByteStream::end_input() { _is_ended = true; }
 
-bool ByteStream::input_ended() const { return _isEnded; }
+bool ByteStream::input_ended() const { return _is_ended; }
 
 size_t ByteStream::buffer_size() const { return _buffer.length(); }
 
@@ -49,8 +49,8 @@ bool ByteStream::buffer_empty() const { return _buffer.empty(); }
 
 bool ByteStream::eof() const { return input_ended() && buffer_empty(); }
 
-size_t ByteStream::bytes_written() const { return _writtenLength; }
+size_t ByteStream::bytes_written() const { return _written_length; }
 
-size_t ByteStream::bytes_read() const { return _writtenLength - buffer_size(); }
+size_t ByteStream::bytes_read() const { return bytes_written() - buffer_size(); }
 
 size_t ByteStream::remaining_capacity() const { return _capacity - buffer_size(); }
