@@ -22,10 +22,20 @@ size_t ByteStream::write(const string &data) {
 }
 
 //! \param[in] len bytes will be copied from the output side of the buffer
-string ByteStream::peek_output(const size_t len) const { return _buffer.substr(0, len); }
+string ByteStream::peek_output(const size_t len) const {
+    if (len > buffer_size()) {
+        // Does not call set_error due to the function being const.
+        return std::string();
+    }
+    return _buffer.substr(0, len);
+}
 
 //! \param[in] len bytes will be removed from the output side of the buffer
 void ByteStream::pop_output(const size_t len) {
+    if (len > buffer_size()) {
+        set_error();
+        return;
+    }
     _buffer.erase(0, len);
     return;
 }
@@ -34,6 +44,10 @@ void ByteStream::pop_output(const size_t len) {
 //! \param[in] len bytes will be popped and returned
 //! \returns a string
 std::string ByteStream::read(const size_t len) {
+    if (len > buffer_size()) {
+        set_error();
+        return std::string();
+    }
     string str = peek_output(len);
     pop_output(len);
     return str;
