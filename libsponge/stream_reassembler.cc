@@ -18,7 +18,7 @@ StreamReassembler::StreamReassembler(const size_t capacity) : _output(capacity),
 //! possibly out-of-order, from the logical stream, and assembles any newly
 //! contiguous substrings and writes them into the output stream in order.
 void StreamReassembler::push_substring(const string &data, const size_t index, const bool eof) {
-    // DUMMY_CODE(data, index, eof);
+    list<tuple<size_t, size_t, string>>::iterator iter;
     size_t data_length = data.length();
 
     if (eof) {
@@ -37,21 +37,24 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     size_t temp_start_index = max(_unassembled_start_index, index);
     tuple<size_t, size_t> temp = make_tuple(temp_start_index, index + data_length - 1);
 
-    list<tuple<size_t, size_t, string>>::iterator iter;
+    
     for (iter = _staging_list.begin(); iter != _staging_list.end(); iter++) {
         size_t temp_start = get<0>(temp);
         size_t temp_end = get<1>(temp);
-        if (temp_start < get<0>(*iter)) {
+        size_t iter_start = get<0>(*iter);
+        size_t iter_end = get<1>(*iter);
+
+        if (temp_start < iter_start) {
             size_t remain_size = _capacity - unassembled_bytes() - _output.buffer_size();
             if (remain_size == 0) {
                 break;
             }
 
             size_t max_end = min(temp_end,
-                                 min(max(get<0>(*iter), static_cast<size_t>(1)) - 1,
+                                 min(max(iter_start, static_cast<size_t>(1)) - 1,
                                      min(temp_start + remain_size - 1,
                                          _unassembled_start_index + _capacity - _output.buffer_size() - 1)));
-            size_t next_start = get<1>(*iter) + 1;
+            size_t next_start = iter_end + 1;
             size_t next_end = temp_end;
             if (max_end >= temp_start) {
                 _staging_list.insert(iter,
@@ -62,17 +65,17 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
             }
 
             //}
-            if (temp_end <= get<1>(*iter)) {
+            if (temp_end <= iter_end) {
                 break;
             }
             if (next_start > next_end) {
                 break;
             }
             temp = make_tuple(next_start, next_end);
-        } else if (temp_end <= get<1>(*iter)) {
+        } else if (temp_end <= iter_end) {
             break;
-        } else if (temp_end > get<1>(*iter)) {
-            temp = make_tuple(max(get<1>(*iter) + 1, temp_start), temp_end);
+        } else if (temp_end > iter_end) {
+            temp = make_tuple(max(iter_end + 1, temp_start), temp_end);
         }
     }
     if (iter == _staging_list.end()) {
