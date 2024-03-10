@@ -87,7 +87,8 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     }
 
     // check if there are string that can be attached at buffer, and do it.
-    for (iter = _staging_list.begin(); iter != _staging_list.end();) {
+    iter = _staging_list.begin();
+    while (iter != _staging_list.end()) {
         size_t iter_start = get<0>(*iter);
         size_t iter_end = get<1>(*iter);
         if (iter_start == _unassembled_start_index) {
