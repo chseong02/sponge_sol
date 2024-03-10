@@ -24,3 +24,12 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
 size_t StreamReassembler::unassembled_bytes() const { return _staging_size; }
 
 bool StreamReassembler::empty() const { return _staging_size == 0; }
+
+void StreamReassembler::_eof_process() {
+    if (_have_eof && _unassembled_start_index >= _eof_index) {
+        _output.end_input();
+        _staging_list.clear();
+        _staging_size = 0;
+    }
+    return;
+}
