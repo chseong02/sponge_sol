@@ -52,15 +52,17 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
             size_t next_end = temp_end;
             if (temp_max_end_in_this_iter >= temp_start) {
                 size_t substring_length = temp_max_end_in_this_iter - temp_start + 1;
-                _staging_list.insert(
-                    iter, make_tuple(temp_start, temp_max_end_in_this_iter, data.substr(temp_start - index, substring_length)));
+                _staging_list.insert(iter,
+                                     make_tuple(temp_start,
+                                                temp_max_end_in_this_iter,
+                                                data.substr(temp_start - index, substring_length)));
                 _staging_size += substring_length;
             }
             if (next_start > next_end) {
                 break;
             }
             temp = make_tuple(next_start, next_end);
-        } 
+        }
         // when temp belongs to iter string completly
         else if (temp_end <= iter_end) {
             break;
@@ -78,12 +80,13 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
 
         if (temp_start <= temp_max_end_in_this_iter) {
             size_t substring_length = temp_max_end_in_this_iter - temp_start + 1;
-            _staging_list.push_back(make_tuple(temp_start, temp_max_end_in_this_iter, data.substr(temp_start - index, substring_length)));
+            _staging_list.push_back(
+                make_tuple(temp_start, temp_max_end_in_this_iter, data.substr(temp_start - index, substring_length)));
             _staging_size += substring_length;
         }
     }
 
-    // check if there are string that can be attached at buffer, and do it. 
+    // check if there are string that can be attached at buffer, and do it.
     for (iter = _staging_list.begin(); iter != _staging_list.end();) {
         size_t iter_start = get<0>(*iter);
         size_t iter_end = get<1>(*iter);
