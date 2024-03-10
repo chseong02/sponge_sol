@@ -71,9 +71,9 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         size_t max_end = min(temp_end, unassembled_max_index);
 
         if (temp_start <= max_end) {
-            _staging_list.push_back(
-                make_tuple(temp_start, max_end, data.substr(temp_start - index, max_end - temp_start + 1)));
-            _staging_size += max_end - temp_start + 1;
+            size_t substring_length = max_end - temp_start + 1;
+            _staging_list.push_back(make_tuple(temp_start, max_end, data.substr(temp_start - index, substring_length)));
+            _staging_size += substring_length;
         }
     }
     for (iter = _staging_list.begin(); iter != _staging_list.end();) {
