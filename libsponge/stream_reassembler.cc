@@ -29,6 +29,7 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         _eof_process();
         return;
     }
+    // already assembled data
     if ((index + data_length) < _unassembled_start_index) {
         _eof_process();
         return;
@@ -38,44 +39,51 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     tuple<size_t, size_t> temp = make_tuple(temp_start_index, index + data_length - 1);
     size_t unassembled_max_index = (_unassembled_start_index - _output.buffer_size()) + (_capacity - 1);
 
+    // place data in the correct location of _staging_list
     for (iter = _staging_list.begin(); iter != _staging_list.end(); iter++) {
         size_t temp_start = get<0>(temp);
         size_t temp_end = get<1>(temp);
         size_t iter_start = get<0>(*iter);
         size_t iter_end = get<1>(*iter);
         if (temp_start < iter_start) {
-            size_t max_end = min({temp_end, iter_start - 1, unassembled_max_index});
+            // temp's maximum end index that can be inserted before this iter.
+            size_t temp_max_end_in_this_iter = min({temp_end, iter_start - 1, unassembled_max_index});
             size_t next_start = iter_end + 1;
             size_t next_end = temp_end;
-            if (max_end >= temp_start) {
-                size_t substring_length = max_end - temp_start + 1;
+            if (temp_max_end_in_this_iter >= temp_start) {
+                size_t substring_length = temp_max_end_in_this_iter - temp_start + 1;
                 _staging_list.insert(
-                    iter, make_tuple(temp_start, max_end, data.substr(temp_start - index, substring_length)));
+                    iter, make_tuple(temp_start, temp_max_end_in_this_iter, data.substr(temp_start - index, substring_length)));
                 _staging_size += substring_length;
             }
             if (next_start > next_end) {
                 break;
             }
             temp = make_tuple(next_start, next_end);
-        } else if (temp_end <= iter_end) {
+        } 
+        // when temp belongs to iter string completly
+        else if (temp_end <= iter_end) {
             break;
         }
-        // if (temp_end > iter_end)
+        // when there are some string after iter string
         else {
             temp = make_tuple(max(iter_end + 1, temp_start), temp_end);
         }
     }
+    // when temp is last item of _staging_list
     if (iter == _staging_list.end()) {
         size_t temp_start = get<0>(temp);
         size_t temp_end = get<1>(temp);
-        size_t max_end = min(temp_end, unassembled_max_index);
+        size_t temp_max_end_in_this_iter = min(temp_end, unassembled_max_index);
 
-        if (temp_start <= max_end) {
-            size_t substring_length = max_end - temp_start + 1;
-            _staging_list.push_back(make_tuple(temp_start, max_end, data.substr(temp_start - index, substring_length)));
+        if (temp_start <= temp_max_end_in_this_iter) {
+            size_t substring_length = temp_max_end_in_this_iter - temp_start + 1;
+            _staging_list.push_back(make_tuple(temp_start, temp_max_end_in_this_iter, data.substr(temp_start - index, substring_length)));
             _staging_size += substring_length;
         }
     }
+
+    // check if there are string that can be attached at buffer, and do it. 
     for (iter = _staging_list.begin(); iter != _staging_list.end();) {
         size_t iter_start = get<0>(*iter);
         size_t iter_end = get<1>(*iter);
