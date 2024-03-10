@@ -21,6 +21,6 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     DUMMY_CODE(data, index, eof);
 }
 
-size_t StreamReassembler::unassembled_bytes() const { return {}; }
+size_t StreamReassembler::unassembled_bytes() const { return _staging_size; }
 
-bool StreamReassembler::empty() const { return {}; }
+bool StreamReassembler::empty() const { return _staging_size == 0; }
