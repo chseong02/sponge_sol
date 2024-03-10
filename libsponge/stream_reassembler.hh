@@ -17,7 +17,7 @@ class StreamReassembler {
     std::list<std::tuple<size_t, size_t, std::string>> _staging_list = {};
     size_t _staging_size = 0;
     size_t _unassembled_start_index = 0;
-    // have ever met eof 
+    // have ever met eof
     bool _have_eof = false;
     // stream's last index + 1, so have to larger than 0
     size_t _eof_index = 0;

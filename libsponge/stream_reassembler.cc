@@ -36,37 +36,22 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
 
     size_t temp_start_index = max(_unassembled_start_index, index);
     tuple<size_t, size_t> temp = make_tuple(temp_start_index, index + data_length - 1);
+    size_t unassembled_max_index = (_unassembled_start_index - _output.buffer_size()) + (_capacity - 1);
 
-    
     for (iter = _staging_list.begin(); iter != _staging_list.end(); iter++) {
         size_t temp_start = get<0>(temp);
         size_t temp_end = get<1>(temp);
         size_t iter_start = get<0>(*iter);
         size_t iter_end = get<1>(*iter);
-
         if (temp_start < iter_start) {
-            size_t remain_size = _capacity - unassembled_bytes() - _output.buffer_size();
-            if (remain_size == 0) {
-                break;
-            }
-
-            size_t max_end = min(temp_end,
-                                 min(max(iter_start, static_cast<size_t>(1)) - 1,
-                                     min(temp_start + remain_size - 1,
-                                         _unassembled_start_index + _capacity - _output.buffer_size() - 1)));
+            size_t max_end = min({temp_end, iter_start - 1, unassembled_max_index});
             size_t next_start = iter_end + 1;
             size_t next_end = temp_end;
             if (max_end >= temp_start) {
-                _staging_list.insert(iter,
-                                     make_tuple(temp_start,
-                                                max_end,
-                                                data.substr(temp_start - index, max_end - temp_start + 1)));
-                _staging_size += max_end - temp_start + 1;
-            }
-
-            //}
-            if (temp_end <= iter_end) {
-                break;
+                size_t substring_length = max_end - temp_start + 1;
+                _staging_list.insert(
+                    iter, make_tuple(temp_start, max_end, data.substr(temp_start - index, substring_length)));
+                _staging_size += substring_length;
             }
             if (next_start > next_end) {
                 break;
@@ -74,28 +59,30 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
             temp = make_tuple(next_start, next_end);
         } else if (temp_end <= iter_end) {
             break;
-        } else if (temp_end > iter_end) {
+        }
+        // if (temp_end > iter_end)
+        else {
             temp = make_tuple(max(iter_end + 1, temp_start), temp_end);
         }
     }
     if (iter == _staging_list.end()) {
         size_t temp_start = get<0>(temp);
         size_t temp_end = get<1>(temp);
-        size_t remain_size = _capacity - unassembled_bytes() - _output.buffer_size();
-        if (remain_size != 0) {
-            size_t max_end = min(
-                temp_end,
-                min(temp_start + remain_size - 1, _unassembled_start_index + _capacity - _output.buffer_size() - 1));
+        size_t max_end = min(temp_end, unassembled_max_index);
+
+        if (temp_start <= max_end) {
             _staging_list.push_back(
                 make_tuple(temp_start, max_end, data.substr(temp_start - index, max_end - temp_start + 1)));
             _staging_size += max_end - temp_start + 1;
         }
     }
     for (iter = _staging_list.begin(); iter != _staging_list.end();) {
-        if (get<0>(*iter) == _unassembled_start_index) {
-            size_t size = get<1>(*iter) - get<0>(*iter) + 1;
+        size_t iter_start = get<0>(*iter);
+        size_t iter_end = get<1>(*iter);
+        if (iter_start == _unassembled_start_index) {
+            size_t size = iter_end - iter_start + 1;
             _output.write(move(get<2>(*iter)));
-            _unassembled_start_index = get<1>(*iter) + 1;
+            _unassembled_start_index = iter_end + 1;
             iter = _staging_list.erase(iter);
             _staging_size -= size;
         } else {
