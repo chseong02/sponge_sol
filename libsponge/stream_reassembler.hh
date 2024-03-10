@@ -3,15 +3,23 @@
 
 #include "byte_stream.hh"
 
+#include <algorithm>
 #include <cstdint>
+#include <list>
 #include <string>
+#include <tuple>
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
 class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
-
+    std::list<std::tuple<size_t, size_t, std::string>> _staging_list = {};
+    size_t _staging_size = 0;
+    size_t _unassembled_start_index = 0;
+    bool _have_eof = false;
+    size_t _eof_index = 0;
+    void _eof_process();
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
 
