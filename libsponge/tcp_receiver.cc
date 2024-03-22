@@ -21,15 +21,14 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
         _have_SYN = true;
         _ackno = header.ackno;
         _icn = header.seqno;
-        seqno = wrap(static_cast<uint64_t>(seqno.raw_value())+1,_icn);
+        seqno = wrap(1,_icn);
     }
     // ignore overlap syn
     else if(header.syn){
         return;
     }
-    uint64_t checkpoint = _reassembler.stream_out().bytes_written(); 
-    _reassembler.push_substring(seg.payload().str().data(),unwrap(seqno,_icn, checkpoint)-1 ,header.fin);
-
+    uint64_t checkpoint = _reassembler.stream_out().bytes_written();
+    _reassembler.push_substring(seg.payload().copy(),unwrap(seqno,_icn, checkpoint)-1 ,header.fin);
     if(header.fin){
         _have_FIN = true;
     }
