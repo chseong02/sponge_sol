@@ -14,7 +14,10 @@ using namespace std;
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
 WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
+    // two_32: 2 ^ 32
     const uint64_t two_32 = static_cast<uint64_t>(2) << 31;
+    
+    // seqno = (isn + absolute_seqno) mod (2 ^ 32)
     return WrappingInt32(static_cast<uint32_t>((isn.raw_value() + n) % two_32));
 }
 
