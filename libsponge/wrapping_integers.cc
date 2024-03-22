@@ -31,18 +31,17 @@ WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
 uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
     const uint64_t two_32 = static_cast<uint64_t>(2) << 31;
     uint64_t absolute_seqno_mod = n.raw_value();
-    if(n.raw_value()<isn.raw_value()){
+    if (n.raw_value() < isn.raw_value()) {
         absolute_seqno_mod += two_32;
     }
     absolute_seqno_mod -= isn.raw_value();
-    if(checkpoint/two_32 >=1){
-        if((checkpoint  - (checkpoint/two_32-1) *(two_32)- absolute_seqno_mod)<two_32/2){
-            return absolute_seqno_mod + (checkpoint/two_32-1) *(two_32);
+    if (checkpoint / two_32 >= 1) {
+        if ((checkpoint - (checkpoint / two_32 - 1) * (two_32)-absolute_seqno_mod) < two_32 / 2) {
+            return absolute_seqno_mod + (checkpoint / two_32 - 1) * (two_32);
         }
     }
-    if((absolute_seqno_mod + (checkpoint/two_32+1) *(two_32)-checkpoint)<two_32/2){
-        return absolute_seqno_mod + (checkpoint/two_32+1) *(two_32);
+    if ((absolute_seqno_mod + (checkpoint / two_32 + 1) * (two_32)-checkpoint) < two_32 / 2) {
+        return absolute_seqno_mod + (checkpoint / two_32 + 1) * (two_32);
     }
-    return absolute_seqno_mod + (checkpoint/two_32) *(two_32);
-     
+    return absolute_seqno_mod + (checkpoint / two_32) * (two_32);
 }
