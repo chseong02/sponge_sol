@@ -32,7 +32,11 @@ the upper limit, potentially causing issues.
 But, This only happens for very long abnormal lengths(>=2^64),
 
 
-- Optional: I had unexpected difficulty with: TCP 
+- Optional: I had unexpected difficulty with: 
+  - I had a tough time because I misunderstood the meaning of the Sequence Number
+   header values across multiple packets and whether or not there was a Flag 
+   present in the Payload. In the end, I realized my mistake and I was able to 
+   complete the assignment. 
 
 - Optional: I think you could make this assignment better by: [describe]
 
