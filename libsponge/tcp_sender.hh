@@ -32,6 +32,7 @@ class TCPSender {
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
+    std::queue<TCPSegment> _tracking_segments{};
     // TODO: tracked buffer for _segments_out
 
     enum class _TCPSenderState { Closed, SynSent, SynAcked, SynAckedEof, FinSent, FinAcked };
