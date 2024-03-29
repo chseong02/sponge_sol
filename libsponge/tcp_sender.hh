@@ -34,15 +34,8 @@ class TCPSender {
 
     // TODO: tracked buffer for _segments_out
 
-    enum class _TCPSenderState {
-      Closed,
-      SynSent,
-      SynAcked,
-      SynAckedEof,
-      FinSent,
-      FinAcked
-    };
-    
+    enum class _TCPSenderState { Closed, SynSent, SynAcked, SynAckedEof, FinSent, FinAcked };
+
     TCPSender::_TCPSenderState TCPSender::_current_state() const;
 
   public:

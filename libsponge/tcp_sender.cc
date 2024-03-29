@@ -38,22 +38,22 @@ unsigned int TCPSender::consecutive_retransmissions() const { return {}; }
 void TCPSender::send_empty_segment() {}
 
 TCPSender::_TCPSenderState TCPSender::_current_state() const {
-    if(next_seqno_absolute() == 0){
+    if (next_seqno_absolute() == 0) {
         return _TCPSenderState::Closed;
     }
-    if(next_seqno_absolute()>0 && next_seqno_absolute() == bytes_in_flight()){
+    if (next_seqno_absolute() > 0 && next_seqno_absolute() == bytes_in_flight()) {
         return _TCPSenderState::SynSent;
     }
-    if(next_seqno_absolute() > bytes_in_flight() && !stream_in().eof()){
+    if (next_seqno_absolute() > bytes_in_flight() && !stream_in().eof()) {
         return _TCPSenderState::SynAcked;
     }
-    if(stream_in().eof() && next_seqno_absolute()<stream_in().bytes_written()+2){
+    if (stream_in().eof() && next_seqno_absolute() < stream_in().bytes_written() + 2) {
         return _TCPSenderState::SynAckedEof;
     }
-    if(stream_in().eof() && next_seqno_absolute() == stream_in().bytes_written() + 2 && bytes_in_flight()>0){
+    if (stream_in().eof() && next_seqno_absolute() == stream_in().bytes_written() + 2 && bytes_in_flight() > 0) {
         return _TCPSenderState::FinSent;
     }
-    if(stream_in().eof() && next_seqno_absolute() == stream_in().bytes_written()+2 && bytes_in_flight() == 0){
+    if (stream_in().eof() && next_seqno_absolute() == stream_in().bytes_written() + 2 && bytes_in_flight() == 0) {
         return _TCPSenderState::FinAcked;
     }
 }
