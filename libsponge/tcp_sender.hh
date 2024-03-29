@@ -38,6 +38,7 @@ class TCPSender {
       Closed,
       SynSent,
       SynAcked,
+      SynAckedEof,
       FinSent,
       FinAcked
     };
