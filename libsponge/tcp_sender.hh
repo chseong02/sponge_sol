@@ -32,6 +32,18 @@ class TCPSender {
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
+    // TODO: tracked buffer for _segments_out
+
+    enum class _TCPSenderState {
+      Closed,
+      SynSent,
+      SynAcked,
+      FinSent,
+      FinAcked
+    };
+    
+    TCPSender::_TCPSenderState TCPSender::_current_state() const;
+
   public:
     //! Initialize a TCPSender
     TCPSender(const size_t capacity = TCPConfig::DEFAULT_CAPACITY,
