@@ -48,10 +48,6 @@ void TCPSender::fill_window() {
         default:
         {
             uint16_t window_size = _remain_window_size;
-            if(_window_size == 0 && _current_state()!=_TCPSenderState::SynAckedEof){
-                window_size = 1;
-            }
-
             while(window_size>0 && (!_stream.buffer_empty()||_current_state()==_TCPSenderState::SynAckedEof)){
                 
                 uint16_t read_size = min( window_size > _stream.buffer_size()?_stream.buffer_size():window_size,TCPConfig::MAX_PAYLOAD_SIZE); 
@@ -102,7 +98,7 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     }
     _tracked_count = remain_tracked_length;
     _window_size = window_size;
-    _remain_window_size = _window_size;
+    _remain_window_size = _window_size ==0?1:_window_size;
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
@@ -111,7 +107,9 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
     if(_timer >= _retransmission_timeout && bytes_in_flight()!=0){
         _segments_out.push(_tracking_segments.back());
         _timer=0;
-        _retransmission_timeout+=_retransmission_timeout;
+        if(_window_size!=0){
+            _retransmission_timeout+=_retransmission_timeout;
+        }
         _consecutive_time_out_count+=1;
     }
 
