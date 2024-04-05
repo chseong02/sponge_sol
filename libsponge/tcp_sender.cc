@@ -63,6 +63,10 @@ void TCPSender::fill_window() {
                 _tracking_segments.push_front(segment);
                 _next_seqno +=segment.length_in_sequence_space();
                 _tracked_count += segment.length_in_sequence_space();
+                if(_window_size!=0){
+                    _window_size -= segment.length_in_sequence_space();
+                }
+              
             }
             break;
         }
