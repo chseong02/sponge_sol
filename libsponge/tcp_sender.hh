@@ -7,8 +7,8 @@
 #include "wrapping_integers.hh"
 
 #include <functional>
-#include <queue>
 #include <list>
+#include <queue>
 
 //! \brief The "sender" part of a TCP implementation.
 
@@ -33,9 +33,10 @@ class TCPSender {
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
+    // flight, not acked segments
     std::list<TCPSegment> _tracking_segments{};
-    // TODO: tracked buffer for _segments_out
 
+    // flight, not acked segments bytes
     uint64_t _tracked_count{0};
 
     enum class _TCPSenderState { Closed, SynSent, SynAcked, SynAckedEof, FinSent, FinAcked };
@@ -43,9 +44,15 @@ class TCPSender {
     _TCPSenderState _current_state() const;
 
     uint64_t _timer{0};
+
     uint64_t _retransmission_timeout;
+
+    // window size get from ack
     uint16_t _window_size{1};
+
+    // remain bytes from _window_size
     uint16_t _remain_window_size{1};
+
     uint16_t _consecutive_time_out_count{0};
 
   public:
