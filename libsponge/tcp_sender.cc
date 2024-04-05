@@ -81,10 +81,10 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     uint64_t remain_tracked_length=0;
     list<TCPSegment>::iterator iter;
     for(iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++){
-        
         if(iter->header().ackno == ackno){
-
             _tracking_segments.erase(iter,_tracking_segments.end());
+            _consecutive_time_out_count = 0;
+            _retransmission_timeout = _initial_retransmission_timeout;
             break;
         }
         remain_tracked_length+=iter->length_in_sequence_space();
@@ -94,17 +94,17 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void TCPSender::tick(const size_t ms_since_last_tick) {
-    switch (_current_state()) {
-        case _TCPSenderState::Closed: {
-            break;
-        }
-        default:
-            break;
-    }
     _timer += ms_since_last_tick;
+    if(_timer >= _retransmission_timeout && bytes_in_flight()!=0){
+        _segments_out.push(_tracking_segments.back());
+        _timer=0;
+        _retransmission_timeout+=_retransmission_timeout;
+        _consecutive_time_out_count+=1;
+    }
+
 }
 
-unsigned int TCPSender::consecutive_retransmissions() const { return {}; }
+unsigned int TCPSender::consecutive_retransmissions() const { return _consecutive_time_out_count; }
 
 void TCPSender::send_empty_segment() {}
 
