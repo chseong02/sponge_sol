@@ -30,7 +30,7 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
     header.ackno = next_seqno();
     segment.header() = header;
     _segments_out.push(segment);
-    _tracking_segments.push(segment);
+    _tracking_segments.push_front(segment);
     _tracked_count += 1;
     _timer = 0;
 }
@@ -41,7 +41,19 @@ void TCPSender::fill_window() {}
 
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
-void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) { DUMMY_CODE(ackno, window_size); }
+void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
+    _window_size = window_size;
+    uint64_t remain_tracked_length=0;
+    list<TCPSegment>::iterator iter;
+    for(iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++){
+        if(iter->header().ackno == ackno){
+            _tracking_segments.erase(iter,_tracking_segments.end());
+            break;
+        }
+        remain_tracked_length+=iter->length_in_sequence_space();
+    }
+    _tracked_count = remain_tracked_length;
+}
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void TCPSender::tick(const size_t ms_since_last_tick) {
@@ -55,7 +67,7 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
             header.ackno = next_seqno();
             segment.header() = header;
             _segments_out.push(segment);
-            _tracking_segments.push(segment);
+            _tracking_segments.push_front(segment);
             _tracked_count += 1;
             _timer = 0;
             break;
