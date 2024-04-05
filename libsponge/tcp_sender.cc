@@ -20,12 +20,22 @@ using namespace std;
 TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const std::optional<WrappingInt32> fixed_isn)
     : _isn(fixed_isn.value_or(WrappingInt32{random_device()()}))
     , _initial_retransmission_timeout{retx_timeout}
-    , _retransmission_timeout{retx_timeout}
-    , _stream(capacity) {}
-
-uint64_t TCPSender::bytes_in_flight() const {
-    return _tracked_count;
+    , _stream(capacity)
+    , _retransmission_timeout{retx_timeout} {
+    _next_seqno += 1;
+    TCPSegment segment = TCPSegment();
+    TCPHeader header = TCPHeader();
+    header.seqno = _isn;
+    header.syn = true;
+    header.ackno = next_seqno();
+    segment.header() = header;
+    _segments_out.push(segment);
+    _tracking_segments.push(segment);
+    _tracked_count += 1;
+    _timer = 0;
 }
+
+uint64_t TCPSender::bytes_in_flight() const { return _tracked_count; }
 
 void TCPSender::fill_window() {}
 
@@ -35,6 +45,24 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void TCPSender::tick(const size_t ms_since_last_tick) {
+    switch (_current_state()) {
+        case _TCPSenderState::Closed: {
+            _next_seqno += 1;
+            TCPSegment segment = TCPSegment();
+            TCPHeader header = TCPHeader();
+            header.seqno = _isn;
+            header.syn = true;
+            header.ackno = next_seqno();
+            segment.header() = header;
+            _segments_out.push(segment);
+            _tracking_segments.push(segment);
+            _tracked_count += 1;
+            _timer = 0;
+            break;
+        }
+        default:
+            break;
+    }
     _timer += ms_since_last_tick;
 }
 
@@ -61,4 +89,5 @@ TCPSender::_TCPSenderState TCPSender::_current_state() const {
     if (stream_in().eof() && next_seqno_absolute() == stream_in().bytes_written() + 2 && bytes_in_flight() == 0) {
         return _TCPSenderState::FinAcked;
     }
+    return _TCPSenderState::Closed;
 }

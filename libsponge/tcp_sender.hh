@@ -39,10 +39,10 @@ class TCPSender {
 
     enum class _TCPSenderState { Closed, SynSent, SynAcked, SynAckedEof, FinSent, FinAcked };
 
-    TCPSender::_TCPSenderState TCPSender::_current_state() const;
+    _TCPSenderState _current_state() const;
 
     uint64_t _timer{0};
-    uint64_t _retransmission_timeout{0};
+    uint64_t _retransmission_timeout;
 
   public:
     //! Initialize a TCPSender
