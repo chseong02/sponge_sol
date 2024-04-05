@@ -4,6 +4,7 @@
 
 #include <random>
 #include <algorithm>
+#include <iostream>
 
 // Dummy implementation of a TCP sender
 
@@ -48,27 +49,30 @@ void TCPSender::fill_window() {
             if(window_size == 0 ){
                 window_size = 1;
             }
-            uint16_t read_size = window_size > _stream.buffer_size()?_stream.buffer_size():window_size;
-            if(read_size <=0){
-                break;
-            }
-            std::string str =  _stream.read(read_size);
-            uint64_t i;
-            for(i=0; i<str.length(); i+=TCPConfig::MAX_PAYLOAD_SIZE){
+
+            while(window_size>0 && (!_stream.buffer_empty()||_current_state()==_TCPSenderState::SynAckedEof)){
+                
+                uint16_t read_size = min( window_size > _stream.buffer_size()?_stream.buffer_size():window_size,TCPConfig::MAX_PAYLOAD_SIZE); 
+                std::cout<<read_size <<std::endl;
                 TCPSegment segment = TCPSegment();
                 segment.header().seqno = next_seqno();
-                segment.payload() = str.substr(i,min(TCPConfig::MAX_PAYLOAD_SIZE, str.length()-i));
+                if(read_size!=0){
+            segment.payload() = _stream.read(read_size);
+                }
+    
+                if(window_size > read_size && _stream.eof()){
+                    segment.header().fin = true;
+                }
                 segment.header().ackno = segment.header().seqno + segment.length_in_sequence_space(); 
                 _segments_out.push(segment);
                 _tracking_segments.push_front(segment);
                 _next_seqno +=segment.length_in_sequence_space();
                 _tracked_count += segment.length_in_sequence_space();
+                window_size-=segment.length_in_sequence_space();
                 if(_window_size!=0){
                     _window_size -= segment.length_in_sequence_space();
-                }
-              
+                } 
             }
-            break;
         }
     }
    
@@ -84,6 +88,7 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         if(iter->header().ackno == ackno){
             _tracking_segments.erase(iter,_tracking_segments.end());
             _consecutive_time_out_count = 0;
+            _timer = 0;
             _retransmission_timeout = _initial_retransmission_timeout;
             break;
         }
