@@ -43,17 +43,19 @@ void TCPSender::fill_window() {
             _timer = 0;
             break;
         }
+        case _TCPSenderState::SynSent:
+            break;
         default:
         {
-            uint16_t window_size = _window_size;
-            if(window_size == 0 ){
+            uint16_t window_size = _remain_window_size;
+            if(_window_size == 0 && _current_state()!=_TCPSenderState::SynAckedEof){
                 window_size = 1;
             }
 
             while(window_size>0 && (!_stream.buffer_empty()||_current_state()==_TCPSenderState::SynAckedEof)){
                 
                 uint16_t read_size = min( window_size > _stream.buffer_size()?_stream.buffer_size():window_size,TCPConfig::MAX_PAYLOAD_SIZE); 
-                std::cout<<read_size <<std::endl;
+                
                 TCPSegment segment = TCPSegment();
                 segment.header().seqno = next_seqno();
                 if(read_size!=0){
@@ -69,8 +71,8 @@ void TCPSender::fill_window() {
                 _next_seqno +=segment.length_in_sequence_space();
                 _tracked_count += segment.length_in_sequence_space();
                 window_size-=segment.length_in_sequence_space();
-                if(_window_size!=0){
-                    _window_size -= segment.length_in_sequence_space();
+                if(_remain_window_size!=0){
+                    _remain_window_size -= segment.length_in_sequence_space();
                 } 
             }
         }
@@ -81,11 +83,12 @@ void TCPSender::fill_window() {
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
-    _window_size = window_size;
+
     uint64_t remain_tracked_length=0;
     list<TCPSegment>::iterator iter;
     for(iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++){
         if(iter->header().ackno == ackno){
+
             _tracking_segments.erase(iter,_tracking_segments.end());
             _consecutive_time_out_count = 0;
             _timer = 0;
@@ -94,7 +97,12 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         }
         remain_tracked_length+=iter->length_in_sequence_space();
     };
+    if(_tracked_count == remain_tracked_length&&!_tracking_segments.empty()&&_tracking_segments.back().header().seqno.raw_value() < ackno.raw_value()){
+        return;
+    }
     _tracked_count = remain_tracked_length;
+    _window_size = window_size;
+    _remain_window_size = _window_size;
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
