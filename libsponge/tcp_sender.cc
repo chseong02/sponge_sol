@@ -48,6 +48,7 @@ void TCPSender::fill_window() {
             break;
 
         default: {
+            // have remain window and (have remained str or fin flag)
             while (_remain_window_size > 0 &&
                    (!_stream.buffer_empty() || _current_state() == _TCPSenderState::SynAckedEof)) {
                 uint16_t read_size =
@@ -55,16 +56,18 @@ void TCPSender::fill_window() {
                         TCPConfig::MAX_PAYLOAD_SIZE);
 
                 TCPSegment segment = TCPSegment();
-                segment.header().seqno = next_seqno();
                 if (read_size != 0) {
                     segment.payload() = _stream.read(read_size);
                 }
-
+                segment.header().seqno = next_seqno();
+                // Even if you include payload, window remained & buffer eof
                 if (_remain_window_size > read_size && _stream.eof()) {
                     segment.header().fin = true;
                 }
                 segment.header().ackno = segment.header().seqno + segment.length_in_sequence_space();
                 _segments_out.push(segment);
+
+                // First in First out
                 _tracking_segments.push_front(segment);
                 _next_seqno += segment.length_in_sequence_space();
                 _tracked_count += segment.length_in_sequence_space();
@@ -79,6 +82,7 @@ void TCPSender::fill_window() {
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
     uint64_t remain_tracked_length = 0;
     list<TCPSegment>::iterator iter;
+    // latest -> oldest
     for (iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++) {
         if (iter->header().ackno == ackno) {
             _tracking_segments.erase(iter, _tracking_segments.end());
@@ -87,14 +91,19 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
             _retransmission_timeout = _initial_retransmission_timeout;
             break;
         }
+        // segment that still has to be tracked.
         remain_tracked_length += iter->length_in_sequence_space();
     };
+
+    // edge case for Test "Don't add FIN if this would make the segment exceed
+    // the receiver's window"
     if (_tracked_count == remain_tracked_length && !_tracking_segments.empty() &&
         _tracking_segments.back().header().seqno.raw_value() < ackno.raw_value()) {
         return;
     }
     _tracked_count = remain_tracked_length;
     _window_size = window_size;
+    // For Check Window Size Again
     _remain_window_size = _window_size == 0 ? 1 : _window_size;
 }
 
@@ -116,12 +125,14 @@ unsigned int TCPSender::consecutive_retransmissions() const { return _consecutiv
 void TCPSender::send_empty_segment() {
     TCPSegment segment = TCPSegment();
     TCPHeader header = TCPHeader();
+    // Not taking up space
     header.seqno = next_seqno();
     header.ackno = next_seqno();
     segment.header() = header;
     _segments_out.push(segment);
 }
 
+// in accordance with the given Assignment Specification
 TCPSender::_TCPSenderState TCPSender::_current_state() const {
     if (next_seqno_absolute() == 0) {
         return _TCPSenderState::Closed;
