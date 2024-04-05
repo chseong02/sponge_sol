@@ -35,9 +35,14 @@ class TCPSender {
     std::queue<TCPSegment> _tracking_segments{};
     // TODO: tracked buffer for _segments_out
 
+    uint64_t _tracked_count{0};
+
     enum class _TCPSenderState { Closed, SynSent, SynAcked, SynAckedEof, FinSent, FinAcked };
 
     TCPSender::_TCPSenderState TCPSender::_current_state() const;
+
+    uint64_t _timer{0};
+    uint64_t _retransmission_timeout{0};
 
   public:
     //! Initialize a TCPSender

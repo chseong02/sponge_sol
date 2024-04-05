@@ -20,9 +20,12 @@ using namespace std;
 TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const std::optional<WrappingInt32> fixed_isn)
     : _isn(fixed_isn.value_or(WrappingInt32{random_device()()}))
     , _initial_retransmission_timeout{retx_timeout}
+    , _retransmission_timeout{retx_timeout}
     , _stream(capacity) {}
 
-uint64_t TCPSender::bytes_in_flight() const { return !_tracking_segments.empty(); }
+uint64_t TCPSender::bytes_in_flight() const {
+    return _tracked_count;
+}
 
 void TCPSender::fill_window() {}
 
@@ -31,7 +34,9 @@ void TCPSender::fill_window() {}
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) { DUMMY_CODE(ackno, window_size); }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void TCPSender::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void TCPSender::tick(const size_t ms_since_last_tick) {
+    _timer += ms_since_last_tick;
+}
 
 unsigned int TCPSender::consecutive_retransmissions() const { return {}; }
 
