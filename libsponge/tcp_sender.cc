@@ -3,6 +3,7 @@
 #include "tcp_config.hh"
 
 #include <random>
+#include <algorithm>
 
 // Dummy implementation of a TCP sender
 
@@ -21,42 +22,11 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
     : _isn(fixed_isn.value_or(WrappingInt32{random_device()()}))
     , _initial_retransmission_timeout{retx_timeout}
     , _stream(capacity)
-    , _retransmission_timeout{retx_timeout} {
-    _next_seqno += 1;
-    TCPSegment segment = TCPSegment();
-    TCPHeader header = TCPHeader();
-    header.seqno = _isn;
-    header.syn = true;
-    header.ackno = next_seqno();
-    segment.header() = header;
-    _segments_out.push(segment);
-    _tracking_segments.push_front(segment);
-    _tracked_count += 1;
-    _timer = 0;
-}
+    , _retransmission_timeout{retx_timeout} {}
 
 uint64_t TCPSender::bytes_in_flight() const { return _tracked_count; }
 
-void TCPSender::fill_window() {}
-
-//! \param ackno The remote receiver's ackno (acknowledgment number)
-//! \param window_size The remote receiver's advertised window size
-void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
-    _window_size = window_size;
-    uint64_t remain_tracked_length=0;
-    list<TCPSegment>::iterator iter;
-    for(iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++){
-        if(iter->header().ackno == ackno){
-            _tracking_segments.erase(iter,_tracking_segments.end());
-            break;
-        }
-        remain_tracked_length+=iter->length_in_sequence_space();
-    }
-    _tracked_count = remain_tracked_length;
-}
-
-//! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void TCPSender::tick(const size_t ms_since_last_tick) {
+void TCPSender::fill_window() {
     switch (_current_state()) {
         case _TCPSenderState::Closed: {
             _next_seqno += 1;
@@ -70,6 +40,58 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
             _tracking_segments.push_front(segment);
             _tracked_count += 1;
             _timer = 0;
+            break;
+        }
+        default:
+        {
+            uint16_t window_size = _window_size;
+            if(window_size == 0 ){
+                window_size = 1;
+            }
+            uint16_t read_size = window_size > _stream.buffer_size()?_stream.buffer_size():window_size;
+            if(read_size <=0){
+                break;
+            }
+            std::string str =  _stream.read(read_size);
+            uint64_t i;
+            for(i=0; i<str.length(); i+=TCPConfig::MAX_PAYLOAD_SIZE){
+                TCPSegment segment = TCPSegment();
+                segment.header().seqno = next_seqno();
+                segment.payload() = str.substr(i,min(TCPConfig::MAX_PAYLOAD_SIZE, str.length()-i));
+                segment.header().ackno = segment.header().seqno + segment.length_in_sequence_space(); 
+                _segments_out.push(segment);
+                _tracking_segments.push_front(segment);
+                _next_seqno +=segment.length_in_sequence_space();
+                _tracked_count += segment.length_in_sequence_space();
+            }
+            break;
+        }
+    }
+   
+}
+
+//! \param ackno The remote receiver's ackno (acknowledgment number)
+//! \param window_size The remote receiver's advertised window size
+void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
+    _window_size = window_size;
+    uint64_t remain_tracked_length=0;
+    list<TCPSegment>::iterator iter;
+    for(iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++){
+        
+        if(iter->header().ackno == ackno){
+
+            _tracking_segments.erase(iter,_tracking_segments.end());
+            break;
+        }
+        remain_tracked_length+=iter->length_in_sequence_space();
+    };
+    _tracked_count = remain_tracked_length;
+}
+
+//! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
+void TCPSender::tick(const size_t ms_since_last_tick) {
+    switch (_current_state()) {
+        case _TCPSenderState::Closed: {
             break;
         }
         default:

@@ -44,7 +44,7 @@ class TCPSender {
 
     uint64_t _timer{0};
     uint64_t _retransmission_timeout;
-    uint16_t _window_size{1};
+    uint16_t _window_size{0};
 
   public:
     //! Initialize a TCPSender
