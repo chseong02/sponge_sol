@@ -68,14 +68,7 @@ bool TCPConnection::active() const {
 size_t TCPConnection::write(const string &data) {
     size_t written_length = _sender.stream_in().write(data);
     _sender.fill_window();
-    while(!_sender.segments_out().empty()){
-        TCPSegment segment = _sender.segments_out().front();
-        if(_receiver.ackno().has_value()){
-            segment.header().ackno = _receiver.ackno().value();
-        }
-        _segments_out.push(segment);
-        _sender.segments_out().pop();
-    }
+    _move_to_segments_out();
 
 
     return written_length;
@@ -84,15 +77,7 @@ size_t TCPConnection::write(const string &data) {
 //! \param[in] ms_since_last_tick number of milliseconds since the last call to this method
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     _sender.tick(ms_since_last_tick);
-    while(!_sender.segments_out().empty()){
-        TCPSegment segment = _sender.segments_out().front();
-        if(_receiver.ackno().has_value()){
-            segment.header().ackno = _receiver.ackno().value();
-        }
-        _segments_out.push(segment);
-        _sender.segments_out().pop();
-    }
-    cout << _sender.bytes_in_flight() << "왜안됨";
+    _move_to_segments_out();
     _time_since_last_segment_received += ms_since_last_tick;
     if(_time_since_last_segment_received >= 10 * _cfg.rt_timeout && _sender.bytes_in_flight() ==0 && _sender.stream_in().eof()){
         _is_active = false;
@@ -102,26 +87,12 @@ void TCPConnection::tick(const size_t ms_since_last_tick) {
 void TCPConnection::end_input_stream() {
     _sender.stream_in().end_input();
     _sender.fill_window();
-    while(!_sender.segments_out().empty()){
-        TCPSegment segment = _sender.segments_out().front();
-        if(_receiver.ackno().has_value()){
-            segment.header().ackno = _receiver.ackno().value();
-        }
-        _segments_out.push(segment);
-        _sender.segments_out().pop();
-    }
+    _move_to_segments_out();
 }
 
 void TCPConnection::connect() {
     _sender.fill_window();
-    while(!_sender.segments_out().empty()){
-        TCPSegment segment = _sender.segments_out().front();
-        if(_receiver.ackno().has_value()){
-            segment.header().ackno = _receiver.ackno().value();
-        }
-        _segments_out.push(segment);
-        _sender.segments_out().pop();
-    }
+    _move_to_segments_out();
 }
 
 TCPConnection::~TCPConnection() {
