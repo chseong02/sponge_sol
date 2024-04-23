@@ -45,18 +45,10 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         segment.header() = header;
         _segments_out.push(segment);
     }
-    if(_receiver.stream_out().eof() && !(_sender.stream_in().eof())){
+    if(_receiver.stream_out().eof() && !(_sender.stream_in().eof() && _sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2)){
         _linger_after_streams_finish = false;
     }
-    /*
-    if(!_linger_after_streams_finish && _sender.bytes_in_flight() == 1){
-        TCPSegment segment = TCPSegment();
-        TCPHeader header = TCPHeader();
-        header.fin = true;
-        segment.header() = header;
-        _segments_out.push(segment);
-    }*/
-    if(!_linger_after_streams_finish && _sender.bytes_in_flight() ==0 && _sender.stream_in().eof()){
+    if(!_linger_after_streams_finish && _is_satisfied_prereq()){
         _is_active = false;
     }
 }
@@ -70,7 +62,6 @@ size_t TCPConnection::write(const string &data) {
     _sender.fill_window();
     _move_to_segments_out();
 
-
     return written_length;
 }
 
@@ -79,7 +70,7 @@ void TCPConnection::tick(const size_t ms_since_last_tick) {
     _sender.tick(ms_since_last_tick);
     _move_to_segments_out();
     _time_since_last_segment_received += ms_since_last_tick;
-    if(_time_since_last_segment_received >= 10 * _cfg.rt_timeout && _sender.bytes_in_flight() ==0 && _sender.stream_in().eof()){
+    if(_time_since_last_segment_received >= 10 * _cfg.rt_timeout && _is_satisfied_prereq()){
         _is_active = false;
     }
 }
