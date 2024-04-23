@@ -63,6 +63,7 @@ void TCPSender::fill_window() {
                 // Even if you include payload, window remained & buffer eof
                 if (_remain_window_size > read_size && _stream.eof()) {
                     segment.header().fin = true;
+                    segment.header().ack = true;
                 }
                 segment.header().ackno = segment.header().seqno + segment.length_in_sequence_space();
                 _segments_out.push(segment);
