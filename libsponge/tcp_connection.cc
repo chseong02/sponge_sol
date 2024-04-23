@@ -135,3 +135,12 @@ TCPConnection::~TCPConnection() {
         std::cerr << "Exception destructing TCP FSM: " << e.what() << std::endl;
     }
 }
+
+bool TCPConnection::_is_satisfied_prereq() const{
+    if(_receiver.unassembled_bytes() == 0 && _receiver.stream_out().eof()){
+        if(_sender.stream_in().eof() && _sender.bytes_in_flight() == 0){
+            return true;
+        }
+    }
+    return false;
+}

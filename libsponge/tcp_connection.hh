@@ -24,6 +24,7 @@ class TCPConnection {
     bool _is_active = true;
     size_t _time_since_last_segment_received = 0;
 
+    bool _is_satisfied_prereq() const;
   public:
     //! \name "Input" interface for the writer
     //!@{
