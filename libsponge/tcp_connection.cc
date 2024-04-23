@@ -16,7 +16,9 @@ size_t TCPConnection::remaining_outbound_capacity() const {
     _sender.stream_in().remaining_capacity();
  }
 
-size_t TCPConnection::bytes_in_flight() const { return {}; }
+size_t TCPConnection::bytes_in_flight() const {
+    _sender.bytes_in_flight();
+}
 
 size_t TCPConnection::unassembled_bytes() const { return {}; }
 
