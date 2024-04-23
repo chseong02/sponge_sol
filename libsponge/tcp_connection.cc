@@ -44,7 +44,17 @@ void TCPConnection::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_
 
 void TCPConnection::end_input_stream() {}
 
-void TCPConnection::connect() {}
+void TCPConnection::connect() {
+    _sender.fill_window();
+    while(!_sender.segments_out().empty()){
+        TCPSegment segment = _sender.segments_out().front();
+        if(_receiver.ackno().has_value()){
+            segment.header().ackno = _receiver.ackno().value();
+        }
+        _segments_out.push(segment);
+        _sender.segments_out().pop();
+    }
+}
 
 TCPConnection::~TCPConnection() {
     try {
