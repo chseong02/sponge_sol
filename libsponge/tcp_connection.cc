@@ -24,11 +24,15 @@ size_t TCPConnection::unassembled_bytes() const {
     return _receiver.unassembled_bytes();
 }
 
-size_t TCPConnection::time_since_last_segment_received() const { return {}; }
+size_t TCPConnection::time_since_last_segment_received() const {
+    return _time_since_last_segment_received;
+}
 
 void TCPConnection::segment_received(const TCPSegment &seg) { DUMMY_CODE(seg); }
 
-bool TCPConnection::active() const { return {}; }
+bool TCPConnection::active() const {
+    return _is_active;
+}
 
 size_t TCPConnection::write(const string &data) {
     DUMMY_CODE(data);
