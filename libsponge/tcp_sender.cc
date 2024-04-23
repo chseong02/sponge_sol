@@ -110,7 +110,9 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void TCPSender::tick(const size_t ms_since_last_tick) {
-    _timer += ms_since_last_tick;
+    if(bytes_in_flight()!=0){
+        _timer += ms_since_last_tick;
+    }
     if (_timer >= _retransmission_timeout && bytes_in_flight() != 0) {
         _segments_out.push(_tracking_segments.back());
         _timer = 0;
