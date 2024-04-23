@@ -35,8 +35,19 @@ bool TCPConnection::active() const {
 }
 
 size_t TCPConnection::write(const string &data) {
-    DUMMY_CODE(data);
-    return {};
+    size_t written_length = _sender.stream_in().write(data);
+    _sender.fill_window();
+    while(!_sender.segments_out().empty()){
+        TCPSegment segment = _sender.segments_out().front();
+        if(_receiver.ackno().has_value()){
+            segment.header().ackno = _receiver.ackno().value();
+        }
+        _segments_out.push(segment);
+        _sender.segments_out().pop();
+    }
+
+
+    return written_length;
 }
 
 //! \param[in] ms_since_last_tick number of milliseconds since the last call to this method
