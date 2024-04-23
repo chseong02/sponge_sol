@@ -28,7 +28,23 @@ size_t TCPConnection::time_since_last_segment_received() const {
     return _time_since_last_segment_received;
 }
 
-void TCPConnection::segment_received(const TCPSegment &seg) { DUMMY_CODE(seg); }
+void TCPConnection::segment_received(const TCPSegment &seg) {
+    if(seg.header().ack){
+        _sender.ack_received(seg.header().ackno,seg.header().win);
+    }
+    if(seg.header().syn || seg.header().fin || !seg.header().ack){
+        _receiver.segment_received(seg);
+        TCPSegment segment = TCPSegment();
+        TCPHeader header = TCPHeader();
+        header.ack = true;
+        header.seqno = _sender.next_seqno();
+        if(_receiver.ackno().has_value()){
+            header.ackno = _receiver.ackno().value();
+        }
+        segment.header() = header;
+        _segments_out.push(segment);
+    }
+}
 
 bool TCPConnection::active() const {
     return _is_active;
