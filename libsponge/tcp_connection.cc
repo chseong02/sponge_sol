@@ -144,3 +144,14 @@ bool TCPConnection::_is_satisfied_prereq() const{
     }
     return false;
 }
+
+void TCPConnection::_move_to_segments_out() {
+    while(!_sender.segments_out().empty()){
+        TCPSegment segment = _sender.segments_out().front();
+        if(_receiver.ackno().has_value()){
+            segment.header().ackno = _receiver.ackno().value();
+        }
+        _segments_out.push(segment);
+        _sender.segments_out().pop();
+    }
+}
