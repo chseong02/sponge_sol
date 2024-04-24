@@ -30,14 +30,16 @@ size_t TCPConnection::time_since_last_segment_received() const {
 
 void TCPConnection::segment_received(const TCPSegment &seg) {
     _time_since_last_segment_received = 0;
-    if(seg.header().ack){
-        _sender.ack_received(seg.header().ackno,seg.header().win);
-    }
     if(seg.header().rst){
         _is_active = false;
         _sender.stream_in().set_error();
         _receiver.stream_out().set_error();
     }
+    if(_sender.next_seqno_absolute()!=0&&seg.header().ack){
+        _sender.ack_received(seg.header().ackno,seg.header().win);
+        _sender.fill_window();
+    }
+
     if(seg.length_in_sequence_space() > 0){
         _receiver.segment_received(seg);
         //TCPSegment segment = TCPSegment();
@@ -46,7 +48,10 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
             connect();
             return;
         }
-        _sender.send_empty_segment();
+        if(_segments_out.empty()){
+            _sender.send_empty_segment();
+        }
+
         _move_to_segments_out();
         // header.ack = true;
         // header.seqno = _sender.next_seqno();
