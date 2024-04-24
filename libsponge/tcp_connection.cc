@@ -33,17 +33,28 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
     if(seg.header().ack){
         _sender.ack_received(seg.header().ackno,seg.header().win);
     }
-    if(seg.header().syn || seg.header().fin || !seg.header().ack){
+    if(seg.header().rst){
+        _is_active = false;
+        _sender.stream_in().set_error();
+        _receiver.stream_out().set_error();
+    }
+    if(seg.length_in_sequence_space() > 0){
         _receiver.segment_received(seg);
-        TCPSegment segment = TCPSegment();
-        TCPHeader header = TCPHeader();
-        header.ack = true;
-        header.seqno = _sender.next_seqno();
-        if(_receiver.ackno().has_value()){
-            header.ackno = _receiver.ackno().value();
+        //TCPSegment segment = TCPSegment();
+        //TCPHeader header = TCPHeader();
+        if(_sender.next_seqno_absolute()==0){
+            connect();
+            return;
         }
-        segment.header() = header;
-        _segments_out.push(segment);
+        _sender.send_empty_segment();
+        _move_to_segments_out();
+        // header.ack = true;
+        // header.seqno = _sender.next_seqno();
+        // if(_receiver.ackno().has_value()){
+        //     header.ackno = _receiver.ackno().value();
+        // }
+        // segment.header() = header;
+        // _segments_out.push(segment);
     }
     if(_receiver.stream_out().eof() && !(_sender.stream_in().eof() && _sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2)){
         _linger_after_streams_finish = false;
@@ -112,6 +123,7 @@ void TCPConnection::_move_to_segments_out() {
         TCPSegment segment = _sender.segments_out().front();
         if(_receiver.ackno().has_value()){
             segment.header().ackno = _receiver.ackno().value();
+            segment.header().ack = true;
         }
         _segments_out.push(segment);
         _sender.segments_out().pop();
