@@ -42,8 +42,6 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
 
     if(seg.length_in_sequence_space() > 0){
         _receiver.segment_received(seg);
-        //TCPSegment segment = TCPSegment();
-        //TCPHeader header = TCPHeader();
         if(_sender.next_seqno_absolute()==0){
             connect();
             return;
@@ -53,13 +51,6 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         }
 
         _move_to_segments_out();
-        // header.ack = true;
-        // header.seqno = _sender.next_seqno();
-        // if(_receiver.ackno().has_value()){
-        //     header.ackno = _receiver.ackno().value();
-        // }
-        // segment.header() = header;
-        // _segments_out.push(segment);
     }
     if(_receiver.stream_out().eof() && !(_sender.stream_in().eof() && _sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2)){
         _linger_after_streams_finish = false;
@@ -84,11 +75,21 @@ size_t TCPConnection::write(const string &data) {
 //! \param[in] ms_since_last_tick number of milliseconds since the last call to this method
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     _sender.tick(ms_since_last_tick);
-    _move_to_segments_out();
     _time_since_last_segment_received += ms_since_last_tick;
     if(_time_since_last_segment_received >= 10 * _cfg.rt_timeout && _is_satisfied_prereq()){
         _is_active = false;
     }
+    if(_sender.consecutive_retransmissions()>TCPConfig::MAX_RETX_ATTEMPTS){
+        TCPSegment segment = TCPSegment();
+        segment.header().rst = true;
+        _segments_out.push(segment);
+        _is_active = false;
+        _sender.stream_in().set_error();
+        _receiver.stream_out().set_error();
+        _linger_after_streams_finish = false;
+        return;
+    }
+    _move_to_segments_out();
 }
 
 void TCPConnection::end_input_stream() {
@@ -108,6 +109,13 @@ TCPConnection::~TCPConnection() {
             cerr << "Warning: Unclean shutdown of TCPConnection\n";
 
             // Your code here: need to send a RST segment to the peer
+            TCPSegment segment = TCPSegment();
+            segment.header().rst = true;
+            _segments_out.push(segment);
+            _is_active = false;
+            _sender.stream_in().set_error();
+            _receiver.stream_out().set_error();
+            _linger_after_streams_finish = false;
         }
     } catch (const exception &e) {
         std::cerr << "Exception destructing TCP FSM: " << e.what() << std::endl;
