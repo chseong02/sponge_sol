@@ -105,7 +105,7 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     _tracked_count = remain_tracked_length;
     _window_size = window_size;
     // For Check Window Size Again
-    _remain_window_size = _window_size == 0 ? 1 : _window_size;
+    _remain_window_size = _window_size == 0 && _tracked_count == 0 ? 1 : _window_size;
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
