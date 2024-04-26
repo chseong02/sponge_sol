@@ -87,7 +87,7 @@ void TCPSender::fill_window() {
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
     uint64_t remain_tracked_length = 0;
     list<TCPSegment>::iterator iter;
-    
+
     if (unwrap(ackno, _isn, _next_ackno) >= _next_ackno && unwrap(ackno, _isn, _next_ackno) <= _next_seqno) {
         _window_size = window_size;
     }
