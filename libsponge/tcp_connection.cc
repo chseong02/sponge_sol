@@ -39,6 +39,7 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
 
     // receive payload or SYN, FIN flag
     if (seg.length_in_sequence_space() > 0) {
+        // SYN
         if (_sender.next_seqno_absolute() == 0) {
             connect();
             return;
