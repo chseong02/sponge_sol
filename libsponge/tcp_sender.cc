@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <random>
 
+#include <iostream>
+
 // Dummy implementation of a TCP sender
 
 // For Lab 3, please replace with a real implementation that passes the
@@ -27,6 +29,7 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
 uint64_t TCPSender::bytes_in_flight() const { return _tracked_count; }
 
 void TCPSender::fill_window() {
+        //std::cerr << "'"<<bytes_in_flight()<<"'"<<"  ";
     switch (_current_state()) {
         // Never sent SYN
         case _TCPSenderState::Closed: {
@@ -49,10 +52,10 @@ void TCPSender::fill_window() {
 
         default: {
             // have remain window and (have remained str or fin flag)
-            while (_remain_window_size > 0 &&
+            while (_next_ackno + _remain_window_size > next_seqno_absolute() &&
                    (!_stream.buffer_empty() || _current_state() == _TCPSenderState::SynAckedEof)) {
                 uint16_t read_size =
-                    min(_remain_window_size > _stream.buffer_size() ? _stream.buffer_size() : _remain_window_size,
+                    min((_next_ackno + _remain_window_size - next_seqno_absolute()) > _stream.buffer_size() ? _stream.buffer_size() :(_next_ackno + _remain_window_size - next_seqno_absolute()),
                         TCPConfig::MAX_PAYLOAD_SIZE);
 
                 TCPSegment segment = TCPSegment();
@@ -67,12 +70,15 @@ void TCPSender::fill_window() {
                 }
                 segment.header().ackno = segment.header().seqno + segment.length_in_sequence_space();
                 _segments_out.push(segment);
+                //std::cerr << "'"<<segment.length_in_sequence_space()<<"'"<<"  ";
 
                 // First in First out
                 _tracking_segments.push_front(segment);
                 _next_seqno += segment.length_in_sequence_space();
                 _tracked_count += segment.length_in_sequence_space();
-                _remain_window_size -= segment.length_in_sequence_space();
+                if(_remain_window_size!=_window_size){
+                    _remain_window_size =0;//-= segment.length_in_sequence_space();
+                }
             }
         }
     }
@@ -84,8 +90,15 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     uint64_t remain_tracked_length = 0;
     list<TCPSegment>::iterator iter;
     // latest -> oldest
+    if(unwrap(ackno,_isn,_next_ackno) >= _next_ackno && unwrap(ackno,_isn,_next_ackno) <= _next_seqno ){
+        _window_size = window_size;
+    }
+    
     for (iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++) {
         if (iter->header().ackno == ackno) {
+            if(unwrap(ackno,_isn,_next_ackno) > _next_ackno){
+                _next_ackno = unwrap(ackno,_isn,_next_ackno);
+            }
             _tracking_segments.erase(iter, _tracking_segments.end());
             _consecutive_time_out_count = 0;
             _timer = 0;
@@ -103,7 +116,8 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         return;
     }
     _tracked_count = remain_tracked_length;
-    _window_size = window_size;
+    
+
     // For Check Window Size Again
     _remain_window_size = _window_size == 0 && _tracked_count == 0 ? 1 : _window_size;
 }
