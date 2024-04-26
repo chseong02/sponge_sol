@@ -1,4 +1,4 @@
-#include "socket.hh"
+#include "tcp_sponge_socket.hh"
 #include "util.hh"
 
 #include <cstdlib>
@@ -22,7 +22,7 @@ void get_URL(const string &host, const string &path) {
     const string end = "\r\n"s;
 
     Address address(host, service);
-    TCPSocket socket;
+    CS144TCPSocket socket;
     string request;
 
     socket.connect(address);
@@ -38,6 +38,7 @@ void get_URL(const string &host, const string &path) {
     }
 
     socket.close();
+    socket.wait_until_closed();
 }
 
 int main(int argc, char *argv[]) {
