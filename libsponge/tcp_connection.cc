@@ -23,32 +23,41 @@ size_t TCPConnection::time_since_last_segment_received() const { return _time_si
 void TCPConnection::segment_received(const TCPSegment &seg) {
     _time_since_last_segment_received = 0;
     _receiver.segment_received(seg);
+
     if (seg.header().rst) {
         _is_active = false;
         _sender.stream_in().set_error();
         _receiver.stream_out().set_error();
     }
+
+    // receive ack except before syn
     if (_sender.next_seqno_absolute() != 0 && seg.header().ack) {
         _sender.ack_received(seg.header().ackno, seg.header().win);
         _sender.fill_window();
         _move_to_segments_out();
     }
 
+    // receive payload or SYN, FIN flag
     if (seg.length_in_sequence_space() > 0) {
         if (_sender.next_seqno_absolute() == 0) {
             connect();
             return;
         }
+        // default ack
         if (_segments_out.empty()) {
             _sender.send_empty_segment();
         }
 
         _move_to_segments_out();
     }
+
+    // alive ping
     if (_receiver.stream_out().eof() &&
         !(_sender.stream_in().eof() && _sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2)) {
         _linger_after_streams_finish = false;
     }
+
+    // passive close
     if (!_linger_after_streams_finish && _is_satisfied_prereq()) {
         _is_active = false;
     }
@@ -68,9 +77,13 @@ size_t TCPConnection::write(const string &data) {
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     _sender.tick(ms_since_last_tick);
     _time_since_last_segment_received += ms_since_last_tick;
+
+    // active close
     if (_time_since_last_segment_received >= 10 * _cfg.rt_timeout && _is_satisfied_prereq()) {
         _is_active = false;
     }
+
+    // resent max overflow reset
     if (_sender.consecutive_retransmissions() > TCPConfig::MAX_RETX_ATTEMPTS) {
         TCPSegment segment = TCPSegment();
         segment.header().rst = true;
@@ -114,6 +127,7 @@ TCPConnection::~TCPConnection() {
     }
 }
 
+// check condition about clean shutdown
 bool TCPConnection::_is_satisfied_prereq() const {
     if (_receiver.unassembled_bytes() == 0 && _receiver.stream_out().eof()) {
         if (_sender.stream_in().eof() && _sender.bytes_in_flight() == 0) {
@@ -123,6 +137,8 @@ bool TCPConnection::_is_satisfied_prereq() const {
     return false;
 }
 
+// move seg _sender.segments_out --> _segments_out
+// when have ackno, always ack
 void TCPConnection::_move_to_segments_out() {
     while (!_sender.segments_out().empty()) {
         TCPSegment segment = _sender.segments_out().front();
