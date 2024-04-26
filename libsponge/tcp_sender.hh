@@ -33,6 +33,7 @@ class TCPSender {
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
+    // the absolute sequence number for largest acknowledged number
     uint64_t _next_ackno{0};
 
     // flight, not acked segments

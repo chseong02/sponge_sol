@@ -5,8 +5,6 @@
 #include <algorithm>
 #include <random>
 
-#include <iostream>
-
 // Dummy implementation of a TCP sender
 
 // For Lab 3, please replace with a real implementation that passes the
@@ -54,7 +52,9 @@ void TCPSender::fill_window() {
             while (_next_ackno + _remain_window_size > next_seqno_absolute() &&
                    (!_stream.buffer_empty() || _current_state() == _TCPSenderState::SynAckedEof)) {
                 uint16_t read_size =
-                    min((_next_ackno + _remain_window_size - next_seqno_absolute()) > _stream.buffer_size() ? _stream.buffer_size() :(_next_ackno + _remain_window_size - next_seqno_absolute()),
+                    min((_next_ackno + _remain_window_size - next_seqno_absolute()) > _stream.buffer_size()
+                            ? _stream.buffer_size()
+                            : (_next_ackno + _remain_window_size - next_seqno_absolute()),
                         TCPConfig::MAX_PAYLOAD_SIZE);
 
                 TCPSegment segment = TCPSegment();
@@ -74,8 +74,8 @@ void TCPSender::fill_window() {
                 _tracking_segments.push_front(segment);
                 _next_seqno += segment.length_in_sequence_space();
                 _tracked_count += segment.length_in_sequence_space();
-                if(_remain_window_size!=_window_size){
-                    _remain_window_size =0;
+                if (_remain_window_size != _window_size) {
+                    _remain_window_size = 0;
                 }
             }
         }
@@ -88,14 +88,14 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     uint64_t remain_tracked_length = 0;
     list<TCPSegment>::iterator iter;
     // latest -> oldest
-    if(unwrap(ackno,_isn,_next_ackno) >= _next_ackno && unwrap(ackno,_isn,_next_ackno) <= _next_seqno ){
+    if (unwrap(ackno, _isn, _next_ackno) >= _next_ackno && unwrap(ackno, _isn, _next_ackno) <= _next_seqno) {
         _window_size = window_size;
     }
-    
+
     for (iter = _tracking_segments.begin(); iter != _tracking_segments.end(); iter++) {
         if (iter->header().ackno == ackno) {
-            if(unwrap(ackno,_isn,_next_ackno) > _next_ackno){
-                _next_ackno = unwrap(ackno,_isn,_next_ackno);
+            if (unwrap(ackno, _isn, _next_ackno) > _next_ackno) {
+                _next_ackno = unwrap(ackno, _isn, _next_ackno);
             }
             _tracking_segments.erase(iter, _tracking_segments.end());
             _consecutive_time_out_count = 0;
@@ -114,7 +114,6 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         return;
     }
     _tracked_count = remain_tracked_length;
-    
 
     // For Check Window Size Again
     _remain_window_size = _window_size == 0 && _tracked_count == 0 ? 1 : _window_size;
@@ -122,7 +121,7 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void TCPSender::tick(const size_t ms_since_last_tick) {
-    if(bytes_in_flight()!=0){
+    if (bytes_in_flight() != 0) {
         _timer += ms_since_last_tick;
     }
     if (_timer >= _retransmission_timeout && bytes_in_flight() != 0) {

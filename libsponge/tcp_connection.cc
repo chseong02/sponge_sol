@@ -12,58 +12,49 @@ void DUMMY_CODE(Targs &&... /* unused */) {}
 
 using namespace std;
 
-size_t TCPConnection::remaining_outbound_capacity() const {
-    return _sender.stream_in().remaining_capacity();
- }
+size_t TCPConnection::remaining_outbound_capacity() const { return _sender.stream_in().remaining_capacity(); }
 
-size_t TCPConnection::bytes_in_flight() const {
-    return _sender.bytes_in_flight();
-}
+size_t TCPConnection::bytes_in_flight() const { return _sender.bytes_in_flight(); }
 
-size_t TCPConnection::unassembled_bytes() const {
-    return _receiver.unassembled_bytes();
-}
+size_t TCPConnection::unassembled_bytes() const { return _receiver.unassembled_bytes(); }
 
-size_t TCPConnection::time_since_last_segment_received() const {
-    return _time_since_last_segment_received;
-}
+size_t TCPConnection::time_since_last_segment_received() const { return _time_since_last_segment_received; }
 
 void TCPConnection::segment_received(const TCPSegment &seg) {
     _time_since_last_segment_received = 0;
     _receiver.segment_received(seg);
-    if(seg.header().rst){
+    if (seg.header().rst) {
         _is_active = false;
         _sender.stream_in().set_error();
         _receiver.stream_out().set_error();
     }
-    if(_sender.next_seqno_absolute()!=0&&seg.header().ack){
-        _sender.ack_received(seg.header().ackno,seg.header().win);
+    if (_sender.next_seqno_absolute() != 0 && seg.header().ack) {
+        _sender.ack_received(seg.header().ackno, seg.header().win);
         _sender.fill_window();
         _move_to_segments_out();
     }
-    
-    if(seg.length_in_sequence_space() > 0){
-        if(_sender.next_seqno_absolute()==0){
+
+    if (seg.length_in_sequence_space() > 0) {
+        if (_sender.next_seqno_absolute() == 0) {
             connect();
             return;
         }
-        if(_segments_out.empty()){
+        if (_segments_out.empty()) {
             _sender.send_empty_segment();
         }
 
         _move_to_segments_out();
     }
-    if(_receiver.stream_out().eof() && !(_sender.stream_in().eof() && _sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2)){
+    if (_receiver.stream_out().eof() &&
+        !(_sender.stream_in().eof() && _sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2)) {
         _linger_after_streams_finish = false;
     }
-    if(!_linger_after_streams_finish && _is_satisfied_prereq()){
+    if (!_linger_after_streams_finish && _is_satisfied_prereq()) {
         _is_active = false;
     }
 }
 
-bool TCPConnection::active() const {
-    return _is_active;
-}
+bool TCPConnection::active() const { return _is_active; }
 
 size_t TCPConnection::write(const string &data) {
     size_t written_length = _sender.stream_in().write(data);
@@ -77,10 +68,10 @@ size_t TCPConnection::write(const string &data) {
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     _sender.tick(ms_since_last_tick);
     _time_since_last_segment_received += ms_since_last_tick;
-    if(_time_since_last_segment_received >= 10 * _cfg.rt_timeout && _is_satisfied_prereq()){
+    if (_time_since_last_segment_received >= 10 * _cfg.rt_timeout && _is_satisfied_prereq()) {
         _is_active = false;
     }
-    if(_sender.consecutive_retransmissions()>TCPConfig::MAX_RETX_ATTEMPTS){
+    if (_sender.consecutive_retransmissions() > TCPConfig::MAX_RETX_ATTEMPTS) {
         TCPSegment segment = TCPSegment();
         segment.header().rst = true;
         _segments_out.push(segment);
@@ -123,9 +114,9 @@ TCPConnection::~TCPConnection() {
     }
 }
 
-bool TCPConnection::_is_satisfied_prereq() const{
-    if(_receiver.unassembled_bytes() == 0 && _receiver.stream_out().eof()){
-        if(_sender.stream_in().eof() && _sender.bytes_in_flight() == 0){
+bool TCPConnection::_is_satisfied_prereq() const {
+    if (_receiver.unassembled_bytes() == 0 && _receiver.stream_out().eof()) {
+        if (_sender.stream_in().eof() && _sender.bytes_in_flight() == 0) {
             return true;
         }
     }
@@ -133,9 +124,9 @@ bool TCPConnection::_is_satisfied_prereq() const{
 }
 
 void TCPConnection::_move_to_segments_out() {
-    while(!_sender.segments_out().empty()){
+    while (!_sender.segments_out().empty()) {
         TCPSegment segment = _sender.segments_out().front();
-        if(_receiver.ackno().has_value()){
+        if (_receiver.ackno().has_value()) {
             segment.header().ack = true;
             segment.header().ackno = _receiver.ackno().value();
             segment.header().win = _receiver.window_size();

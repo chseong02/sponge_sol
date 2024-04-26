@@ -26,6 +26,7 @@ class TCPConnection {
 
     bool _is_satisfied_prereq() const;
     void _move_to_segments_out();
+
   public:
     //! \name "Input" interface for the writer
     //!@{
