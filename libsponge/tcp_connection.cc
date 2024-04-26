@@ -41,10 +41,8 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         _sender.fill_window();
         _move_to_segments_out();
     }
-    //std::cerr << _sender.next_seqno_absolute() <<"  ";
     
     if(seg.length_in_sequence_space() > 0){
-            //std::cerr << _receiver.window_size() << "|"<<seg.length_in_sequence_space()<<"|"<< _receiver.stream_out().bytes_read()<<"  ";
         if(_sender.next_seqno_absolute()==0){
             connect();
             return;
@@ -55,10 +53,6 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
 
         _move_to_segments_out();
     }
-    // if (_receiver.ackno().has_value() && (seg.length_in_sequence_space() == 0)
-    //     && seg.header().seqno == _receiver.ackno().value() - 1) {
-    //     _sender.send_empty_segment();
-    // }
     if(_receiver.stream_out().eof() && !(_sender.stream_in().eof() && _sender.next_seqno_absolute() == _sender.stream_in().bytes_written() + 2)){
         _linger_after_streams_finish = false;
     }

@@ -29,7 +29,6 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
 uint64_t TCPSender::bytes_in_flight() const { return _tracked_count; }
 
 void TCPSender::fill_window() {
-        //std::cerr << "'"<<bytes_in_flight()<<"'"<<"  ";
     switch (_current_state()) {
         // Never sent SYN
         case _TCPSenderState::Closed: {
@@ -70,14 +69,13 @@ void TCPSender::fill_window() {
                 }
                 segment.header().ackno = segment.header().seqno + segment.length_in_sequence_space();
                 _segments_out.push(segment);
-                //std::cerr << "'"<<segment.length_in_sequence_space()<<"'"<<"  ";
 
                 // First in First out
                 _tracking_segments.push_front(segment);
                 _next_seqno += segment.length_in_sequence_space();
                 _tracked_count += segment.length_in_sequence_space();
                 if(_remain_window_size!=_window_size){
-                    _remain_window_size =0;//-= segment.length_in_sequence_space();
+                    _remain_window_size =0;
                 }
             }
         }
