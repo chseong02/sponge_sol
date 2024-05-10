@@ -53,6 +53,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     arp_request.sender_ethernet_address = _ethernet_address;
     arp_request.target_ip_address = next_hop_ip;
     frame.payload() = arp_request.serialize();
+    frame.header().src = _ethernet_address;
     frames_out().push(frame);
 }
 
