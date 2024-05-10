@@ -47,7 +47,7 @@ class NetworkInterface {
 
     std::map<uint32_t, std::pair<EthernetAddress, size_t>> _address_table{};
 
-    std::list<std::pair<InternetDatagram, Address>> _dgram_delay_queue{};
+    std::list<std::tuple<InternetDatagram, uint32_t, size_t>> _dgram_delay_queue{};
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses

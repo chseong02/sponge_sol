@@ -48,7 +48,17 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
     // valid mapping not exist
     // ARP request
-    _dgram_delay_queue.push_back(pair<InternetDatagram, Address>(dgram, next_hop));
+        list<std::tuple<InternetDatagram, uint32_t,size_t>>::iterator delay_queue_iter;
+    delay_queue_iter = _dgram_delay_queue.begin();
+    while (delay_queue_iter != _dgram_delay_queue.end()) {
+        if(get<1>(*delay_queue_iter)==next_hop_ip&&get<2>(*delay_queue_iter)>_timer){
+            _dgram_delay_queue.push_back(make_tuple(dgram, next_hop_ip,_timer));
+            return;
+        }
+        delay_queue_iter++;
+    }
+    _dgram_delay_queue.push_back(make_tuple(dgram, next_hop_ip,_timer+5*1000));
+
     ARPMessage arp_request = ARPMessage();
     frame.header().type = EthernetHeader::TYPE_ARP;
     arp_request.opcode = arp_request.OPCODE_REQUEST;
@@ -104,18 +114,18 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         }
     }
     if (_dgram_delay_queue.empty() == false) {
-        list<std::pair<InternetDatagram, Address>>::iterator iter;
+        list<std::tuple<InternetDatagram, uint32_t,size_t>>::iterator iter;
         iter = _dgram_delay_queue.begin();
         while (iter != _dgram_delay_queue.end()) {
             map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator map_iter;
-            map_iter = _address_table.find(iter->second.ipv4_numeric());
+            map_iter = _address_table.find(get<1>(*iter));
 
             EthernetFrame send_frame = EthernetFrame();
             // valid mapping exist
             if (map_iter != _address_table.end()) {
                 send_frame.header().type = EthernetHeader::TYPE_IPv4;
                 cout <<"치호"<< _dgram_delay_queue.size();
-                send_frame.payload() = iter->first.serialize();
+                send_frame.payload() = get<0>(*iter).serialize();
                 cout <<"네트웤";
                 send_frame.header().src = _ethernet_address;
                 send_frame.header().dst = map_iter->second.first;
@@ -138,7 +148,7 @@ void NetworkInterface::tick(const size_t ms_since_last_tick) {
     map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator iter;
     iter = _address_table.begin();
     while (iter != _address_table.end()) {
-        if (iter->second.second < ms_since_last_tick) {
+        if (iter->second.second < _timer) {
             iter = _address_table.erase(iter);
         } else {
             iter++;
