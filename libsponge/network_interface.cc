@@ -37,7 +37,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
     EthernetFrame frame = EthernetFrame();
     // valid mapping exist
-    if(iter!=_address_table.end()){
+    if (iter != _address_table.end()) {
         frame.header().type = EthernetHeader::TYPE_IPv4;
         frame.payload() = dgram.serialize();
         frame.header().src = _ethernet_address;
@@ -61,14 +61,14 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
-    if(frame.header().dst != _ethernet_address|| frame.header().dst != ETHERNET_BROADCAST){
+    if (frame.header().dst != _ethernet_address || frame.header().dst != ETHERNET_BROADCAST) {
         return;
     }
 
-    if(frame.header().type == EthernetHeader::TYPE_IPv4){
+    if (frame.header().type == EthernetHeader::TYPE_IPv4) {
         InternetDatagram dgram = InternetDatagram();
         ParseResult parse_result = dgram.parse(frame.payload());
-        if(parse_result == ParseResult::NoError){
+        if (parse_result == ParseResult::NoError) {
             return dgram;
         }
         return std::nullopt;
@@ -77,25 +77,26 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
     // ARP received
     ARPMessage recv_arp = ARPMessage();
     ParseResult parse_result = recv_arp.parse(frame.payload());
-    if(parse_result != ParseResult::NoError){
+    if (parse_result != ParseResult::NoError) {
         return std::nullopt;
     }
 
-    _address_table[Address::from_ipv4_numeric(recv_arp.sender_ip_address)] = pair<EthernetAddress, size_t>(recv_arp.sender_ethernet_address,_timer+30*1000);
-    if(recv_arp.opcode == ARPMessage::OPCODE_REQUEST){
+    _address_table[Address::from_ipv4_numeric(recv_arp.sender_ip_address)] =
+        pair<EthernetAddress, size_t>(recv_arp.sender_ethernet_address, _timer + 30 * 1000);
+    if (recv_arp.opcode == ARPMessage::OPCODE_REQUEST) {
         // have to reply
-        if(recv_arp.target_ip_address == _ip_address.ipv4_numeric()){
-                EthernetFrame frame = EthernetFrame();
-                ARPMessage arp_request = ARPMessage();
-                frame.header().type = EthernetHeader::TYPE_ARP;
-                arp_request.opcode = arp_request.OPCODE_REPLY;
-                arp_request.sender_ip_address = _ip_address.ipv4_numeric();
-                arp_request.sender_ethernet_address = _ethernet_address;
-                arp_request.target_ip_address = recv_arp.sender_ip_address;
-                arp_request.target_ethernet_address = recv_arp.sender_ethernet_address;
-                frame.payload() = arp_request.serialize();
-                frame.header().src = _ethernet_address;
-                frames_out().push(frame);
+        if (recv_arp.target_ip_address == _ip_address.ipv4_numeric()) {
+            EthernetFrame frame = EthernetFrame();
+            ARPMessage arp_request = ARPMessage();
+            frame.header().type = EthernetHeader::TYPE_ARP;
+            arp_request.opcode = arp_request.OPCODE_REPLY;
+            arp_request.sender_ip_address = _ip_address.ipv4_numeric();
+            arp_request.sender_ethernet_address = _ethernet_address;
+            arp_request.target_ip_address = recv_arp.sender_ip_address;
+            arp_request.target_ethernet_address = recv_arp.sender_ethernet_address;
+            frame.payload() = arp_request.serialize();
+            frame.header().src = _ethernet_address;
+            frames_out().push(frame);
             return std::nullopt;
         }
         return std::nullopt;
@@ -107,11 +108,10 @@ void NetworkInterface::tick(const size_t ms_since_last_tick) {
     _timer += ms_since_last_tick;
 
     map<Address, std::pair<EthernetAddress, size_t>>::iterator iter;
-    for(iter=_address_table.begin(); iter!=_address_table.end(); iter){
-        if(iter->second.second<ms_since_last_tick){
+    for (iter = _address_table.begin(); iter != _address_table.end(); iter) {
+        if (iter->second.second < ms_since_last_tick) {
             iter = _address_table.erase(iter);
-        }
-        else {
+        } else {
             iter++;
         }
     }
