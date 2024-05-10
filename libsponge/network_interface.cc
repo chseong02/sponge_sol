@@ -61,7 +61,17 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
+    InternetDatagram dgram = InternetDatagram();
 
+    if(frame.header().type == EthernetHeader::TYPE_IPv4){
+        ParseResult parse_result = dgram.parse(frame.payload());
+        if(parse_result == ParseResult::PacketTooShort){
+            return dgram;
+        }
+        return;
+    }
+
+    
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
