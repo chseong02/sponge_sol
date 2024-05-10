@@ -61,7 +61,20 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
+
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void NetworkInterface::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void NetworkInterface::tick(const size_t ms_since_last_tick) {
+    _timer += ms_since_last_tick;
+
+    map<Address, std::pair<EthernetAddress, size_t>>::iterator iter;
+    for(iter=_address_table.begin(); iter!=_address_table.end(); iter){
+        if(iter->second.second<ms_since_last_tick){
+            iter = _address_table.erase(iter);
+        }
+        else {
+            iter++;
+        }
+    }
+}
