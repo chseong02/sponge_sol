@@ -54,6 +54,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     arp_request.sender_ip_address = _ip_address.ipv4_numeric();
     arp_request.sender_ethernet_address = _ethernet_address;
     arp_request.target_ip_address = next_hop_ip;
+    arp_request.target_ethernet_address = ETHERNET_BROADCAST;
     frame.payload() = arp_request.serialize();
     frame.header().src = _ethernet_address;
     frames_out().push(frame);
@@ -62,7 +63,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
     if (frame.header().dst != _ethernet_address || frame.header().dst != ETHERNET_BROADCAST) {
-        return;
+        return std::nullopt;
     }
 
     if (frame.header().type == EthernetHeader::TYPE_IPv4) {
@@ -86,21 +87,22 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
     if (recv_arp.opcode == ARPMessage::OPCODE_REQUEST) {
         // have to reply
         if (recv_arp.target_ip_address == _ip_address.ipv4_numeric()) {
-            EthernetFrame frame = EthernetFrame();
+            EthernetFrame send_frame = EthernetFrame();
             ARPMessage arp_request = ARPMessage();
-            frame.header().type = EthernetHeader::TYPE_ARP;
+            send_frame.header().type = EthernetHeader::TYPE_ARP;
             arp_request.opcode = arp_request.OPCODE_REPLY;
             arp_request.sender_ip_address = _ip_address.ipv4_numeric();
             arp_request.sender_ethernet_address = _ethernet_address;
             arp_request.target_ip_address = recv_arp.sender_ip_address;
             arp_request.target_ethernet_address = recv_arp.sender_ethernet_address;
-            frame.payload() = arp_request.serialize();
-            frame.header().src = _ethernet_address;
+            send_frame.payload() = arp_request.serialize();
+            send_frame.header().src = _ethernet_address;
             frames_out().push(frame);
             return std::nullopt;
         }
         return std::nullopt;
     }
+    return std::nullopt;
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
@@ -108,7 +110,8 @@ void NetworkInterface::tick(const size_t ms_since_last_tick) {
     _timer += ms_since_last_tick;
 
     map<Address, std::pair<EthernetAddress, size_t>>::iterator iter;
-    for (iter = _address_table.begin(); iter != _address_table.end(); iter) {
+    iter = _address_table.begin(); 
+    while(iter != _address_table.end()) {
         if (iter->second.second < ms_since_last_tick) {
             iter = _address_table.erase(iter);
         } else {
