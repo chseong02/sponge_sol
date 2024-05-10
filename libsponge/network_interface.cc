@@ -35,17 +35,25 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     map<Address, std::pair<EthernetAddress, size_t>>::iterator iter;
     iter = _address_table.find(next_hop);
 
+    EthernetFrame frame = EthernetFrame();
     // valid mapping exist
     if(iter!=_address_table.end()){
-        EthernetFrame frame = EthernetFrame();
         frame.payload() = dgram.serialize();
         frame.header().src = _ethernet_address;
         frame.header().dst = iter->second.first;
+        frames_out().push(frame);
         return;
     }
 
     // valid mapping not exist
     // ARP request
+    ARPMessage arp_request = ARPMessage();
+    arp_request.opcode = arp_request.OPCODE_REQUEST;
+    arp_request.sender_ip_address = _ip_address.ipv4_numeric();
+    arp_request.sender_ethernet_address = _ethernet_address;
+    arp_request.target_ip_address = next_hop_ip;
+    frame.payload() = arp_request.serialize();
+    frames_out().push(frame);
 }
 
 //! \param[in] frame the incoming Ethernet frame
