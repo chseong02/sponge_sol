@@ -5,6 +5,7 @@
 #include "tcp_over_ip.hh"
 #include "tun.hh"
 
+#include <list>
 #include <map>
 #include <optional>
 #include <queue>
@@ -46,7 +47,7 @@ class NetworkInterface {
 
     std::map<Address, std::pair<EthernetAddress, size_t>> _address_table{};
 
-    std::queue<std::pair<InternetDatagram, Address>> _dgram_delay_queue{};
+    std::list<std::pair<InternetDatagram, Address>> _dgram_delay_queue{};
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
