@@ -22,7 +22,7 @@ void get_URL(const string &host, const string &path) {
     const string end = "\r\n"s;
 
     Address address(host, service);
-    CS144TCPSocket socket;
+    FullStackSocket socket;
     string request;
 
     socket.connect(address);
