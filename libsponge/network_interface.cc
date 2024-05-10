@@ -47,9 +47,9 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     }
 
     // valid mapping not exist
-    // ARP request
     list<std::tuple<InternetDatagram, uint32_t, size_t>>::iterator delay_queue_iter;
     delay_queue_iter = _dgram_delay_queue.begin();
+    // previous ARP request not time out
     while (delay_queue_iter != _dgram_delay_queue.end()) {
         if (get<1>(*delay_queue_iter) == next_hop_ip && get<2>(*delay_queue_iter) > _timer) {
             _dgram_delay_queue.push_back(make_tuple(dgram, next_hop_ip, _timer));
@@ -57,8 +57,10 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
         }
         delay_queue_iter++;
     }
+    // queueing, with 5seconds time out pending
     _dgram_delay_queue.push_back(make_tuple(dgram, next_hop_ip, _timer + 5 * 1000));
 
+    // ARP request
     ARPMessage arp_request = ARPMessage();
     frame.header().type = EthernetHeader::TYPE_ARP;
     arp_request.opcode = arp_request.OPCODE_REQUEST;
@@ -73,10 +75,12 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
+    // not for me
     if (frame.header().dst != _ethernet_address && frame.header().dst != ETHERNET_BROADCAST) {
         return std::nullopt;
     }
 
+    // IPv4 received
     if (frame.header().type == EthernetHeader::TYPE_IPv4) {
         InternetDatagram dgram = InternetDatagram();
         ParseResult parse_result = dgram.parse(frame.payload());
@@ -93,11 +97,12 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         return std::nullopt;
     }
 
+    // add ip, ethernet address mapping (with 30seconds life)
     _address_table[recv_arp.sender_ip_address] =
         pair<EthernetAddress, size_t>(recv_arp.sender_ethernet_address, _timer + 30 * 1000);
 
     if (recv_arp.opcode == ARPMessage::OPCODE_REQUEST) {
-        // have to reply
+        // have to reply about ARP request
         if (recv_arp.target_ip_address == _ip_address.ipv4_numeric()) {
             EthernetFrame send_frame = EthernetFrame();
             ARPMessage arp_request = ARPMessage();
@@ -113,27 +118,28 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
             frames_out().push(send_frame);
         }
     }
-    if (_dgram_delay_queue.empty() == false) {
-        list<std::tuple<InternetDatagram, uint32_t, size_t>>::iterator iter;
-        iter = _dgram_delay_queue.begin();
-        while (iter != _dgram_delay_queue.end()) {
-            map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator map_iter;
-            map_iter = _address_table.find(get<1>(*iter));
 
-            EthernetFrame send_frame = EthernetFrame();
-            // valid mapping exist
-            if (map_iter != _address_table.end()) {
-                send_frame.header().type = EthernetHeader::TYPE_IPv4;
-                send_frame.payload() = get<0>(*iter).serialize();
-                send_frame.header().src = _ethernet_address;
-                send_frame.header().dst = map_iter->second.first;
-                frames_out().push(send_frame);
-                iter = _dgram_delay_queue.erase(iter);
-            } else {
-                iter++;
-            }
+    // Check if any of the delayed dgrams can be sent
+    list<std::tuple<InternetDatagram, uint32_t, size_t>>::iterator delay_queue_iter;
+    delay_queue_iter = _dgram_delay_queue.begin();
+    while (delay_queue_iter != _dgram_delay_queue.end()) {
+        map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator address_iter;
+        address_iter = _address_table.find(get<1>(*delay_queue_iter));
+
+        EthernetFrame send_frame = EthernetFrame();
+        // if valid mapping exist
+        if (address_iter != _address_table.end()) {
+            send_frame.header().type = EthernetHeader::TYPE_IPv4;
+            send_frame.payload() = get<0>(*delay_queue_iter).serialize();
+            send_frame.header().src = _ethernet_address;
+            send_frame.header().dst = address_iter->second.first;
+            frames_out().push(send_frame);
+            delay_queue_iter = _dgram_delay_queue.erase(delay_queue_iter);
+        } else {
+            delay_queue_iter++;
         }
     }
+    
     return std::nullopt;
 }
 

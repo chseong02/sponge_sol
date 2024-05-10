@@ -43,6 +43,7 @@ class NetworkInterface {
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
 
+    // Standard time similar to epoch time mechanism (in ms)
     size_t _timer = 0;
 
     std::map<uint32_t, std::pair<EthernetAddress, size_t>> _address_table{};
