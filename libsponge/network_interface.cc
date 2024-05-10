@@ -139,7 +139,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
             delay_queue_iter++;
         }
     }
-    
+
     return std::nullopt;
 }
 
