@@ -54,9 +54,9 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     arp_request.sender_ip_address = _ip_address.ipv4_numeric();
     arp_request.sender_ethernet_address = _ethernet_address;
     arp_request.target_ip_address = next_hop_ip;
-    arp_request.target_ethernet_address = ETHERNET_BROADCAST;
     frame.payload() = arp_request.serialize();
     frame.header().src = _ethernet_address;
+    frame.header().dst = ETHERNET_BROADCAST;
     frames_out().push(frame);
 }
 
