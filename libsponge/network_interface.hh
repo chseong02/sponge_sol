@@ -42,11 +42,11 @@ class NetworkInterface {
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
 
-    size_t _timer;
+    size_t _timer=0;
 
-    std::map<Address, std::pair<EthernetAddress, size_t>> _address_table;
+    std::map<Address, std::pair<EthernetAddress, size_t>> _address_table{};
 
-    std::queue<std::pair<InternetDatagram, Address>> _dgram_delay_queue;
+    std::queue<std::pair<InternetDatagram, Address>> _dgram_delay_queue{};
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
