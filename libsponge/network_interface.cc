@@ -38,6 +38,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     EthernetFrame frame = EthernetFrame();
     // valid mapping exist
     if(iter!=_address_table.end()){
+        frame.header().type = EthernetHeader::TYPE_IPv4;
         frame.payload() = dgram.serialize();
         frame.header().src = _ethernet_address;
         frame.header().dst = iter->second.first;
@@ -48,6 +49,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     // valid mapping not exist
     // ARP request
     ARPMessage arp_request = ARPMessage();
+    frame.header().type = EthernetHeader::TYPE_ARP;
     arp_request.opcode = arp_request.OPCODE_REQUEST;
     arp_request.sender_ip_address = _ip_address.ipv4_numeric();
     arp_request.sender_ethernet_address = _ethernet_address;
@@ -59,8 +61,6 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
-    DUMMY_CODE(frame);
-    return {};
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
