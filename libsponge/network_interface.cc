@@ -32,8 +32,20 @@ NetworkInterface::NetworkInterface(const EthernetAddress &ethernet_address, cons
 void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Address &next_hop) {
     // convert IP address of next hop to raw 32-bit representation (used in ARP header)
     const uint32_t next_hop_ip = next_hop.ipv4_numeric();
+    map<Address, std::pair<EthernetAddress, size_t>>::iterator iter;
+    iter = _address_table.find(next_hop);
 
-    DUMMY_CODE(dgram, next_hop, next_hop_ip);
+    // valid mapping exist
+    if(iter!=_address_table.end()){
+        EthernetFrame frame = EthernetFrame();
+        frame.payload() = dgram.serialize();
+        frame.header().src = _ethernet_address;
+        frame.header().dst = iter->second.first;
+        return;
+    }
+
+    // valid mapping not exist
+    // ARP request
 }
 
 //! \param[in] frame the incoming Ethernet frame
