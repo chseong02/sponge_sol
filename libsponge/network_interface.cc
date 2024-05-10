@@ -61,17 +61,45 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
-    InternetDatagram dgram = InternetDatagram();
-
-    if(frame.header().type == EthernetHeader::TYPE_IPv4){
-        ParseResult parse_result = dgram.parse(frame.payload());
-        if(parse_result == ParseResult::PacketTooShort){
-            return dgram;
-        }
+    if(frame.header().dst != _ethernet_address|| frame.header().dst != ETHERNET_BROADCAST){
         return;
     }
 
-    
+    if(frame.header().type == EthernetHeader::TYPE_IPv4){
+        InternetDatagram dgram = InternetDatagram();
+        ParseResult parse_result = dgram.parse(frame.payload());
+        if(parse_result == ParseResult::NoError){
+            return dgram;
+        }
+        return std::nullopt;
+    }
+
+    // ARP received
+    ARPMessage recv_arp = ARPMessage();
+    ParseResult parse_result = recv_arp.parse(frame.payload());
+    if(parse_result != ParseResult::NoError){
+        return std::nullopt;
+    }
+
+    _address_table[Address::from_ipv4_numeric(recv_arp.sender_ip_address)] = pair<EthernetAddress, size_t>(recv_arp.sender_ethernet_address,_timer+30*1000);
+    if(recv_arp.opcode == ARPMessage::OPCODE_REQUEST){
+        // have to reply
+        if(recv_arp.target_ip_address == _ip_address.ipv4_numeric()){
+                EthernetFrame frame = EthernetFrame();
+                ARPMessage arp_request = ARPMessage();
+                frame.header().type = EthernetHeader::TYPE_ARP;
+                arp_request.opcode = arp_request.OPCODE_REPLY;
+                arp_request.sender_ip_address = _ip_address.ipv4_numeric();
+                arp_request.sender_ethernet_address = _ethernet_address;
+                arp_request.target_ip_address = recv_arp.sender_ip_address;
+                arp_request.target_ethernet_address = recv_arp.sender_ethernet_address;
+                frame.payload() = arp_request.serialize();
+                frame.header().src = _ethernet_address;
+                frames_out().push(frame);
+            return std::nullopt;
+        }
+        return std::nullopt;
+    }
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
