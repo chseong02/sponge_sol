@@ -32,8 +32,8 @@ NetworkInterface::NetworkInterface(const EthernetAddress &ethernet_address, cons
 void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Address &next_hop) {
     // convert IP address of next hop to raw 32-bit representation (used in ARP header)
     const uint32_t next_hop_ip = next_hop.ipv4_numeric();
-    map<Address, std::pair<EthernetAddress, size_t>>::iterator iter;
-    iter = _address_table.find(next_hop);
+    map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator iter;
+    iter = _address_table.find(next_hop_ip);
 
     EthernetFrame frame = EthernetFrame();
     // valid mapping exist
@@ -83,7 +83,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         return std::nullopt;
     }
 
-    _address_table[Address::from_ipv4_numeric(recv_arp.sender_ip_address)] =
+    _address_table[recv_arp.sender_ip_address] =
         pair<EthernetAddress, size_t>(recv_arp.sender_ethernet_address, _timer + 30 * 1000);
 
     if (recv_arp.opcode == ARPMessage::OPCODE_REQUEST) {
@@ -99,28 +99,33 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
             arp_request.target_ethernet_address = recv_arp.sender_ethernet_address;
             send_frame.payload() = arp_request.serialize();
             send_frame.header().src = _ethernet_address;
-            frames_out().push(frame);
+            send_frame.header().dst = recv_arp.sender_ethernet_address;
+            frames_out().push(send_frame);
         }
     }
     if (_dgram_delay_queue.empty() == false) {
         list<std::pair<InternetDatagram, Address>>::iterator iter;
         iter = _dgram_delay_queue.begin();
         while (iter != _dgram_delay_queue.end()) {
-            map<Address, std::pair<EthernetAddress, size_t>>::iterator map_iter;
-            map_iter = _address_table.find(iter->second);
+            map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator map_iter;
+            map_iter = _address_table.find(iter->second.ipv4_numeric());
 
             EthernetFrame send_frame = EthernetFrame();
             // valid mapping exist
             if (map_iter != _address_table.end()) {
                 send_frame.header().type = EthernetHeader::TYPE_IPv4;
+                cout <<"치호"<< _dgram_delay_queue.size();
                 send_frame.payload() = iter->first.serialize();
+                cout <<"네트웤";
                 send_frame.header().src = _ethernet_address;
                 send_frame.header().dst = map_iter->second.first;
                 frames_out().push(send_frame);
-                _dgram_delay_queue.erase(iter);
-                continue;
+                iter = _dgram_delay_queue.erase(iter);
             }
+            else {
             iter++;
+            }
+
         }
     }
     return std::nullopt;
@@ -130,7 +135,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 void NetworkInterface::tick(const size_t ms_since_last_tick) {
     _timer += ms_since_last_tick;
 
-    map<Address, std::pair<EthernetAddress, size_t>>::iterator iter;
+    map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator iter;
     iter = _address_table.begin();
     while (iter != _address_table.end()) {
         if (iter->second.second < ms_since_last_tick) {

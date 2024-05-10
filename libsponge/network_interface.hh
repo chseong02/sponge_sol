@@ -45,7 +45,7 @@ class NetworkInterface {
 
     size_t _timer = 0;
 
-    std::map<Address, std::pair<EthernetAddress, size_t>> _address_table{};
+    std::map<uint32_t, std::pair<EthernetAddress, size_t>> _address_table{};
 
     std::list<std::pair<InternetDatagram, Address>> _dgram_delay_queue{};
 
