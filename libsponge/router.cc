@@ -52,7 +52,6 @@ void Router::route_one_datagram(InternetDatagram &dgram) {
             dst_part = dst_part * 2;
         }
         if ((iter = _routes.find(pair<uint32_t, uint8_t>(dst_part, 32 - i))) != _routes.end()) {
-            cout << "입장" << endl;
             pair<optional<Address>, size_t> route_info = iter->second;
             size_t interface_num = route_info.second;
             Address next_hop = route_info.first.has_value() ? route_info.first.value()
@@ -65,12 +64,10 @@ void Router::route_one_datagram(InternetDatagram &dgram) {
             if (new_dgram.header().ttl == 0) {
                 return;
             }
-            cout << "통과" << unsigned(new_dgram.header().ttl) << endl;
             interface(interface_num).send_datagram(new_dgram, next_hop);
             return;
         }
     }
-    cout << "드랍" << endl;
     // drop dgram
     return;
 }
