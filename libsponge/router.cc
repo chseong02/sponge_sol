@@ -31,12 +31,29 @@ void Router::add_route(const uint32_t route_prefix,
 
     DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
     // Your code here.
+    _routes[pair<uint32_t, uint8_t>(route_prefix, prefix_length)]=pair<optional<Address>, size_t>( next_hop, interface_num );
 }
 
 //! \param[in] dgram The datagram to be routed
 void Router::route_one_datagram(InternetDatagram &dgram) {
     DUMMY_CODE(dgram);
     // Your code here.
+    uint8_t i;
+    uint32_t dst_part = dgram.header().dst;
+    std::map<std::pair<uint32_t,uint8_t>,std::pair<optional<Address>, size_t>>::iterator iter;
+    for(i=32; i>0; i--){
+        if((iter=_routes.find(pair<uint32_t, uint8_t>(dst_part,i)))!=_routes.end()){
+            pair<optional<Address>, size_t> route_info = iter->second;
+            size_t interface_num = route_info.second;
+            Address next_hop = route_info.first.has_value() ? route_info.first.value(): Address::from_ipv4_numeric(dgram.header().dst);
+            interface(interface_num).send_datagram(dgram,next_hop);
+            InternetDatagram dgram = InternetDatagram();
+            return;
+        }
+        dst_part = (dst_part/2)*2;
+    }
+    // drop dgram
+    return;
 }
 
 void Router::route() {
