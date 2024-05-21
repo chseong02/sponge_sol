@@ -42,15 +42,16 @@ void Router::route_one_datagram(InternetDatagram &dgram) {
     uint32_t dst = dgram.header().dst;
     
     std::map<std::pair<uint32_t,uint8_t>,std::pair<optional<Address>, size_t>>::iterator iter;
-    for(i=32; i>0; i--){
+    for(i=0; i<=32; i++){
         uint32_t dst_part = dst;
-        for(int j=0; j<(32-i); j++){
+        for(int j=0; j<i; j++){
             dst_part = (dst_part/2);
         }
-        for(int j=0; j<(32-i); j++){
+        for(int j=0; j<i; j++){
             dst_part = dst_part * 2;
         }
-        if((iter=_routes.find(pair<uint32_t, uint8_t>(dst_part,i)))!=_routes.end()){
+        if((iter=_routes.find(pair<uint32_t, uint8_t>(dst_part,32-i)))!=_routes.end()){
+            cout<<"입장"<<endl;
             pair<optional<Address>, size_t> route_info = iter->second;
             size_t interface_num = route_info.second;
             Address next_hop = route_info.first.has_value() ? route_info.first.value(): Address::from_ipv4_numeric(dgram.header().dst);
@@ -62,10 +63,12 @@ void Router::route_one_datagram(InternetDatagram &dgram) {
             if(new_dgram.header().ttl==0){
                 return;
             }
+            cout<<"통과"<<unsigned(new_dgram.header().ttl)<<endl;
             interface(interface_num).send_datagram(new_dgram,next_hop);
             return;
         }
     }
+    cout <<"드랍"<<endl;
     // drop dgram
     return;
 }
