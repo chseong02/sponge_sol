@@ -3,8 +3,8 @@
 
 #include "network_interface.hh"
 
-#include <optional>
 #include <map>
+#include <optional>
 #include <queue>
 
 //! \brief A wrapper for NetworkInterface that makes the host-side
@@ -45,7 +45,7 @@ class Router {
     //! The router's collection of network interfaces
     std::vector<AsyncNetworkInterface> _interfaces{};
 
-    std::map<std::pair<uint32_t,uint8_t>,std::pair<std::optional<Address>, size_t>> _routes{};
+    std::map<std::pair<uint32_t, uint8_t>, std::pair<std::optional<Address>, size_t>> _routes{};
     //! Send a single datagram from the appropriate outbound interface to the next hop,
     //! as specified by the route with the longest prefix_length that matches the
     //! datagram's destination address.
