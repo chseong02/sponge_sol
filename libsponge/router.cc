@@ -39,18 +39,32 @@ void Router::route_one_datagram(InternetDatagram &dgram) {
     DUMMY_CODE(dgram);
     // Your code here.
     uint8_t i;
-    uint32_t dst_part = dgram.header().dst;
+    uint32_t dst = dgram.header().dst;
+    
     std::map<std::pair<uint32_t,uint8_t>,std::pair<optional<Address>, size_t>>::iterator iter;
     for(i=32; i>0; i--){
+        uint32_t dst_part = dst;
+        for(int j=0; j<(32-i); j++){
+            dst_part = (dst_part/2);
+        }
+        for(int j=0; j<(32-i); j++){
+            dst_part = dst_part * 2;
+        }
         if((iter=_routes.find(pair<uint32_t, uint8_t>(dst_part,i)))!=_routes.end()){
             pair<optional<Address>, size_t> route_info = iter->second;
             size_t interface_num = route_info.second;
             Address next_hop = route_info.first.has_value() ? route_info.first.value(): Address::from_ipv4_numeric(dgram.header().dst);
-            interface(interface_num).send_datagram(dgram,next_hop);
-            InternetDatagram dgram = InternetDatagram();
+            if(dgram.header().ttl==0){
+                return;
+            }
+            InternetDatagram new_dgram = dgram;
+            new_dgram.header().ttl-=1;
+            if(new_dgram.header().ttl==0){
+                return;
+            }
+            interface(interface_num).send_datagram(new_dgram,next_hop);
             return;
         }
-        dst_part = (dst_part/2)*2;
     }
     // drop dgram
     return;
