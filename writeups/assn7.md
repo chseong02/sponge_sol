@@ -51,6 +51,9 @@ Server가 보낸 파일의 sha256sum hash값과 Client가 받은 파일의 sha25
 
 다음 과정들을 성공시키기 위해 둘 모두 코드에 대해서 수정한 사항은 없다.
 
+추가로 서로 Role을 변경하여 내가 Server, 신동훈 학우가 Client를 실행하였을 때에도
+모두 정상작동하였다.
+
 ## Creative portion (optional):
 별도로 추가한 점은 없다.
 
